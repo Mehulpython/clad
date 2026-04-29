@@ -6,7 +6,7 @@ import OpenAI from "openai";
 
 // ─── Client ────────────────────────────────────────────────
 
-function getOpenAIClient() {
+export function getOpenAIClient() {
   return new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });

@@ -7,7 +7,7 @@ import { getSupabase } from "@/lib/supabase";
 import {
   generateOutfitCandidates,
   refineOutfitsWithAI,
-} from "@/lib/fit-engine";
+} from "@/lib/outfit-engine";
 import type { OutfitContext, GeneratedOutfit, WardrobeItem, Occasion, Season, Mood } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     // Step 1: Generate algorithmic candidates
-    const candidates = generateOutfitCandidates(wardrobe, context, profile ?? undefined);
+    const candidates = generateOutfitCandidates(wardrobe, context);
 
     if (candidates.length === 0) {
       return NextResponse.json({
@@ -104,10 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 2: Refine with AI reasoning
-    const refinedOutfits = await refineOutfitsWithAI(
-      candidates.map((c) => ({ items: c.items, context })),
-      profile ?? undefined
-    );
+    const refinedOutfits = await refineOutfitsWithAI(candidates, context, profile ?? undefined);
 
     // Step 3: Save top outfits to database
     const savedOutfits: GeneratedOutfit[] = [];

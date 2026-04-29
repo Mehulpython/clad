@@ -267,6 +267,19 @@ export interface StylePreferences {
   dressCodeNotes: string | null;
 }
 
+// ─── Outfit Engine Types ─────────────────────────────────────
+
+export interface ColorHarmony {
+  complementary: string[];
+  analogous: string[];
+  triadic: string[];
+}
+
+export interface OutfitCandidate {
+  items: WardrobeItem[];
+  score: number;
+}
+
 // ─── Weekly Planner ────────────────────────────────────────
 
 export interface DayPlan {
