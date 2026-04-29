@@ -218,7 +218,7 @@ export interface WardrobeGap {
 
 export interface GapSuggestion {
   name: string;
-  type: ItemType | FootwearType;
+  type: string;
   color: string;
   estimatedPriceMin: number;
   estimatedPriceMax: number;

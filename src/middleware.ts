@@ -5,6 +5,7 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/upload(.*)",
   "/api/weather(.*)",
+  "/shop(.*)",       // Shop browsing is public (affiliate links)
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
