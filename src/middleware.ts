@@ -5,7 +5,14 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/upload(.*)",
   "/api/weather(.*)",
-  "/shop(.*)",       // Shop browsing is public (affiliate links)
+  "/shop(.*)",           // Shop browsing is public (affiliate links)
+  "/demo(.*)",           // Public demo page (SEO content)
+  "/blog(.*)",           // Public blog (SEO content)
+  "/resources(.*)",      // Public style guides (SEO link magnet)
+  "/privacy(.*)",        // Legal page
+  "/terms(.*)",          // Legal page
+  "/delete-account(.*)", // Delete account page
+  "/admin(.*)",           // Admin dashboard
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

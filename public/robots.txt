@@ -1,0 +1,22 @@
+# robots.txt for Clad — AI Smart Wardrobe
+# ──────────────────────────────────────────────────────
+# Allow crawlers to index public content
+# Block authenticated/utility routes
+
+User-agent: *
+Allow: /
+
+# Auth-gated app routes (no public content to index)
+Disallow: /api/
+Disallow: /wardrobe
+Disallow: /generate
+Disallow: /outfits
+Disallow: /planner
+Disallow: /scan
+Disallow: /gap-analysis
+Disallow: /stats
+Disallow: /settings
+Disallow: /profile
+
+# Sitemap location (update with real domain when available)
+# Sitemap: https://yourdomain.com/sitemap.xml
