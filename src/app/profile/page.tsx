@@ -2,80 +2,41 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-// ── Types ──────────────────────────────────────────────────
-
-interface StylePreferences {
-  favoriteColors: string[];
-  avoidedColors: string[];
-  preferredStyle: string;
-  riskTolerance: string;
-}
+import PageHeader from "@/components/ui/PageHeader";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 
 interface UserProfileData {
   displayName: string | null;
-  gender: string | null;
-  bodyType: string | null;
-  skinTone: string | null;
-  heightCm: number | null;
-  budgetMonthly: number | null;
-  locationZip: string | null;
-  stylePreferences: StylePreferences;
+  stylePreferences: {
+    favoriteColors: string[];
+    preferredStyle: string;
+    riskTolerance: string;
+  };
   itemCount: number;
-  outfitCount: number;
+  createdAt: string;
 }
-
-const GENDER_OPTIONS = ["male", "female", "non-binary", "prefer-not"];
-const BODY_TYPE_OPTIONS = ["slim", "athletic", "average", "broad", "plus-size"];
-const SKIN_TONE_OPTIONS = ["fair", "light", "medium", "olive", "tan", "dark"];
-const STYLE_OPTIONS = [
-  { value: "minimal", label: "Minimal" },
-  { value: "streetwear", label: "Streetwear" },
-  { value: "bohemian", label: "Bohemian" },
-  { value: "classic", label: "Classic" },
-  { value: "trendy", label: "Trendy" },
-  { value: "edgy", label: "Edgy" },
-  { value: "preppy", label: "Preppy" },
-  { value: "athleisure", label: "Athleisure" },
-];
-const RISK_OPTIONS = [
-  { value: "safe", label: "Safe — I stick to what works" },
-  { value: "moderate", label: "Moderate — Open to new ideas" },
-  { value: "bold", label: "Bold — Push my boundaries" },
-];
-const COLOR_OPTIONS = [
-  "black", "white", "navy", "gray", "beige", "burgundy",
-  "forest green", "olive", "camel", "denim blue", "blush",
-  "lavender", "charcoal", "rust", "teal", "mustard",
-];
 
 export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState<UserProfileData>({
-    displayName: null,
-    gender: null,
-    bodyType: null,
-    skinTone: null,
-    heightCm: null,
-    budgetMonthly: null,
-    locationZip: null,
-    stylePreferences: {
-      favoriteColors: ["navy", "white"],
-      avoidedColors: [],
-      preferredStyle: "casual",
-      riskTolerance: "moderate",
-    },
-    itemCount: 0,
-    outfitCount: 0,
-  });
+  const [displayName, setDisplayName] = useState("");
+  const [preferredStyle, setPreferredStyle] = useState("casual");
+  const [riskTolerance, setRiskTolerance] = useState("moderate");
+  const [favoriteColors, setFavoriteColors] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => r.json())
       .then((data) => {
-        if (data.profile) setProfile(data.profile);
+        if (data.profile) {
+          setProfile(data.profile);
+          setDisplayName(data.profile.displayName || "");
+          setPreferredStyle(data.profile.stylePreferences?.preferredStyle || "casual");
+          setRiskTolerance(data.profile.stylePreferences?.riskTolerance || "moderate");
+          setFavoriteColors(data.profile.stylePreferences?.favoriteColors || []);
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -84,280 +45,160 @@ export default function ProfilePage() {
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch("/api/profile", {
-        method: "PUT",
+      await fetch("/api/profile", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(profile),
+        body: JSON.stringify({
+          displayName,
+          stylePreferences: { preferredStyle, riskTolerance, favoriteColors },
+        }),
       });
-      if (res.ok) {
-        router.refresh();
-      }
     } finally {
       setSaving(false);
     }
   }
 
-  function toggleColor(color: string, field: "favoriteColors" | "avoidedColors") {
-    const current = [...profile.stylePreferences[field]];
-    if (current.includes(color)) {
-      setProfile({
-        ...profile,
-        stylePreferences: {
-          ...profile.stylePreferences,
-          [field]: current.filter((c) => c !== color),
-        },
-      });
-    } else {
-      setProfile({
-        ...profile,
-        stylePreferences: {
-          ...profile.stylePreferences,
-          [field]: [...current, color],
-        },
-      });
-    }
-  }
+  const colorOptions = ["#1e293b", "#dc2626", "#ea580c", "#ca8a04", "#16a34a", "#2563eb", "#7c3aed", "#db2777", "#f8fafc", "#78716c"];
+  const styleOptions = ["casual", "formal", "streetwear", "minimalist", "bohemian", "preppy", "athletic", "vintage"];
+  const riskOptions = [
+    { value: "conservative", label: "Conservative — classic, safe combos" },
+    { value: "moderate", label: "Moderate — balanced with some flair" },
+    { value: "adventurous", label: "Adventurous — bold patterns & colors" },
+  ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#e879f9] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px 24px' }}><LoadingSkeleton type="list" rows={5} /></div>;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white px-4 sm:px-6 py-6 sm:py-8">
-      {/* Header */}
-      <header className="border-b border-white/10 px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg sm:text-xl font-bold">
-            ⚡ <span className="text-[#e879f9]">Clad</span> — Profile
-          </h1>
-          <button
-            onClick={() => router.push("/wardrobe")}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            ← Back to Wardrobe
-          </button>
+    <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px 24px' }}>
+      <PageHeader
+        title="Your Profile"
+        description="Customize your style preferences so AI generates better outfits."
+        badge="Style"
+      />
+
+      {/* Avatar + Name */}
+      <div className="card-static" style={{ padding: 24, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 700, color: 'white', fontFamily: 'var(--font-display)', flexShrink: 0 }}>
+          {(displayName || "C").charAt(0).toUpperCase()}
         </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="glass-card rounded-xl p-6 text-center">
-            <p className="text-4xl font-bold text-[#e879f9]">{profile.itemCount}</p>
-            <p className="text-sm text-gray-400 mt-1">Wardrobe Items</p>
-          </div>
-          <div className="glass-card rounded-xl p-6 text-center">
-            <p className="text-4xl font-bold text-[#e879f9]">{profile.outfitCount}</p>
-            <p className="text-sm text-gray-400 mt-1">Outfits Created</p>
-          </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', marginBottom: 4, display: 'block' }}>Display Name</label>
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="input"
+            placeholder="Your name"
+            style={{ width: '100%' }}
+          />
         </div>
+      </div>
 
-        {/* Basic Info */}
-        <section className="glass-card rounded-xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold mb-4">👤 Basic Info</h2>
+      {/* Style */}
+      <div className="card-static" style={{ padding: 24, marginBottom: 16 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 16 }}>🎨 Style Preference</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {styleOptions.map((style) => (
+            <button
+              key={style}
+              onClick={() => setPreferredStyle(style)}
+              style={{
+                padding: '8px 18px',
+                borderRadius: 'var(--radius-full)',
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: 'var(--font-body)',
+                cursor: 'pointer',
+                transition: 'all 150ms ease',
+                border: '1px solid',
+                textTransform: 'capitalize',
+                ...(preferredStyle === style
+                  ? { background: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' }
+                  : { background: 'var(--color-muted)', color: 'var(--color-muted-foreground)', borderColor: 'var(--color-border)' }),
+              }}
+            >
+              {style}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Display Name</label>
-            <input
-              type="text"
-              value={profile.displayName || ""}
-              onChange={(e) => setProfile({ ...profile, displayName: e.target.value || null })}
-              placeholder="How should we call you?"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#e879f9] focus:outline-none transition-colors"
-            />
-          </div>
+      {/* Risk Tolerance */}
+      <div className="card-static" style={{ padding: 24, marginBottom: 16 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 16 }}>🎲 Style Risk Level</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {riskOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setRiskTolerance(opt.value)}
+              style={{
+                padding: '14px 16px',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: 'var(--font-body)',
+                cursor: 'pointer',
+                transition: 'all 150ms ease',
+                border: '1px solid',
+                textAlign: 'left',
+                ...(riskTolerance === opt.value
+                  ? { background: 'rgba(190,24,93,0.06)', color: 'var(--color-primary)', borderColor: 'var(--color-primary)' }
+                  : { background: 'var(--color-muted)', color: 'var(--color-muted-foreground)', borderColor: 'var(--color-border)' }),
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Gender</label>
-              <select
-                value={profile.gender || ""}
-                onChange={(e) => setProfile({ ...profile, gender: e.target.value || null })}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:border-[#e879f9] focus:outline-none"
+      {/* Favorite Colors */}
+      <div className="card-static" style={{ padding: 24, marginBottom: 16 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 16 }}>💜 Favorite Colors</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {colorOptions.map((color) => {
+            const selected = favoriteColors.includes(color);
+            return (
+              <button
+                key={color}
+                onClick={() => setFavoriteColors(selected ? favoriteColors.filter((c) => c !== color) : [...favoriteColors, color])}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: color,
+                  border: selected ? '3px solid var(--color-primary)' : '2px solid var(--color-border)',
+                  cursor: 'pointer',
+                  transition: 'all 150ms ease',
+                  position: 'relative',
+                }}
               >
-                <option value="">Select...</option>
-                {GENDER_OPTIONS.map((g) => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Body Type</label>
-              <select
-                value={profile.bodyType || ""}
-                onChange={(e) => setProfile({ ...profile, bodyType: e.target.value || null })}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:border-[#e879f9] focus:outline-none"
-              >
-                <option value="">Select...</option>
-                {BODY_TYPE_OPTIONS.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+                {selected && (
+                  <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+                    {isLight(color) ? "✓" : "✓"}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Skin Tone</label>
-              <select
-                value={profile.skinTone || ""}
-                onChange={(e) => setProfile({ ...profile, skinTone: e.target.value || null })}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:border-[#e879f9] focus:outline-none"
-              >
-                <option value="">Select...</option>
-                {SKIN_TONE_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Height (cm)</label>
-              <input
-                type="number"
-                value={profile.heightCm || ""}
-                onChange={(e) => setProfile({ ...profile, heightCm: e.target.value ? Number(e.target.value) : null })}
-                placeholder="175"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#e879f9] focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Monthly Budget ($)</label>
-              <input
-                type="number"
-                value={profile.budgetMonthly || ""}
-                onChange={(e) => setProfile({ ...profile, budgetMonthly: e.target.value ? Number(e.target.value) : null })}
-                placeholder="150"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#e879f9] focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Location (ZIP)</label>
-              <input
-                type="text"
-                value={profile.locationZip || ""}
-                onChange={(e) => setProfile({ ...profile, locationZip: e.target.value || null })}
-                placeholder="10001"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:border-[#e879f9] focus:outline-none"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* Style Preferences */}
-        <section className="glass-card rounded-xl p-6 space-y-4">
-          <h2 className="text-lg font-semibold mb-4">🎨 Style Preferences</h2>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Preferred Style</label>
-            <div className="grid grid-cols-2 gap-2">
-              {STYLE_OPTIONS.map((s) => (
-                <button
-                  key={s.value}
-                  onClick={() =>
-                    setProfile({
-                      ...profile,
-                      stylePreferences: { ...profile.stylePreferences, preferredStyle: s.value },
-                    })
-                  }
-                  className={
-                    "px-4 py-2 rounded-lg text-sm font-medium transition-all " +
-                    (profile.stylePreferences.preferredStyle === s.value
-                      ? "bg-[#e879f9] text-black"
-                      : "bg-white/5 text-gray-300 hover:bg-white/10")
-                  }
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">Risk Tolerance</label>
-            <div className="space-y-2">
-              {RISK_OPTIONS.map((r) => (
-                <button
-                  key={r.value}
-                  onClick={() =>
-                    setProfile({
-                      ...profile,
-                      stylePreferences: { ...profile.stylePreferences, riskTolerance: r.value },
-                    })
-                  }
-                  className={
-                    "w-full px-4 py-2.5 rounded-lg text-left text-sm transition-all " +
-                    (profile.stylePreferences.riskTolerance === r.value
-                      ? "bg-[#e879f9]/20 border border-[#e879f9] text-white"
-                      : "bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10")
-                  }
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Favorite Colors ({profile.stylePreferences.favoriteColors.length} selected)
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {COLOR_OPTIONS.map((color) => (
-                <button
-                  key={color}
-                  onClick={() => toggleColor(color, "favoriteColors")}
-                  className={
-                    "px-3 py-1.5 rounded-full text-xs font-medium transition-all " +
-                    (profile.stylePreferences.favoriteColors.includes(color)
-                      ? "bg-[#e879f9] text-black"
-                      : "bg-white/5 text-gray-400 hover:bg-white/10")
-                  }
-                >
-                  {color}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Avoided Colors ({profile.stylePreferences.avoidedColors.length} selected)
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {COLOR_OPTIONS.map((color) => (
-                <button
-                  key={color}
-                  onClick={() => toggleColor(color, "avoidedColors")}
-                  className={
-                    "px-3 py-1.5 rounded-full text-xs font-medium transition-all " +
-                    (profile.stylePreferences.avoidedColors.includes(color)
-                      ? "bg-red-500/20 border border-red-500/50 text-red-300"
-                      : "bg-white/5 text-gray-400 hover:bg-white/10")
-                  }
-                >
-                  ✗ {color}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Save Button */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full btn-primary py-3 rounded-xl font-semibold text-base disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {saving ? "Saving..." : "💾 Save Profile"}
-        </button>
-      </main>
+      {/* Save */}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="btn-primary"
+        style={{ width: '100%', fontSize: 15, padding: '14px' }}
+      >
+        {saving ? "Saving..." : "Save Profile"}
+      </button>
     </div>
   );
+}
+
+function isLight(hex: string): boolean {
+  const c = hex.replace('#', '');
+  if (c.length !== 6) return true;
+  return (parseInt(c.substring(0,2),16)*299 + parseInt(c.substring(2,4),16)*587 + parseInt(c.substring(4,6),16)*114) / 1000 > 150;
 }

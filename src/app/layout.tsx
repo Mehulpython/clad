@@ -1,10 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Clad — AI Smart Wardrobe",
@@ -13,7 +10,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Clad",
   },
   icons: {
@@ -22,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0f",
+  themeColor: "#FDF2F8",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -34,8 +31,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className={inter.className + " pb-20 md:pb-0"}>
+    <html lang="en">
+      <body className="pb-20 md:pb-0">
         <Navigation />
         <ServiceWorkerRegistration />
         {children}

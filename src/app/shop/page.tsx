@@ -2,213 +2,130 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 
 interface ShopSuggestion {
   id: string;
+  name: string;
+  type: string;
+  color: string;
+  priceMin: number;
+  priceMax: number;
   platform: string;
-  productName: string;
-  productUrl: string;
-  priceUsd: number;
-  affiliateUrl: string | null;
+  url: string;
   reason: string;
 }
 
-const PLATFORM_COLORS: Record<string, string> = {
-  Amazon: "bg-orange-500/20 text-orange-300 border-orange-500/30",
-  "H&M": "bg-red-500/20 text-red-300 border-red-500/30",
-  Zara: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-  Nordstrom: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  Target: "bg-red-600/20 text-red-400 border-red-600/30",
-  ASOS: "bg-black/20 text-gray-300 border-white/10",
-  Uniqlo: "bg-red-700/20 text-red-300 border-red-700/30",
-  Revolve: "bg-pink-500/20 text-pink-300 border-pink-500/30",
-  "Steve Madden": "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-  Nike: "bg-gray-600/20 text-gray-300 border-gray-600/30",
-  "Levi's (Amazon)": "bg-orange-500/20 text-orange-300 border-orange-500/30",
-};
-
-const CATEGORIES = ["tops", "bottoms", "outerwear", "footwear", "dresses", "accessories"];
-
 export default function ShopPage() {
   const router = useRouter();
-  const [suggestions, setSuggestions] = useState<ShopSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterCategory, setFilterCategory] = useState("");
-  const [filterPlatform, setFilterPlatform] = useState("");
-  const [filterMinPrice, setFilterMinPrice] = useState("");
-  const [filterMaxPrice, setFilterMaxPrice] = useState("");
-  const [platforms, setPlatforms] = useState<string[]>([]);
-
-  async function loadShop() {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filterCategory) params.set("category", filterCategory);
-      if (filterPlatform) params.set("platform", filterPlatform);
-      if (filterMinPrice) params.set("minPrice", filterMinPrice);
-      if (filterMaxPrice) params.set("maxPrice", filterMaxPrice);
-
-      const res = await fetch("/api/shop?" + params.toString());
-      const data = await res.json();
-      setSuggestions(data.suggestions || []);
-      setPlatforms(data.platforms || []);
-    } catch (e) {
-      console.error("Failed to load shop:", e);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [suggestions, setSuggestions] = useState<ShopSuggestion[]>([]);
+  const [category, setCategory] = useState("all");
 
   useEffect(() => {
-    loadShop();
-  }, [filterCategory, filterPlatform, filterMinPrice, filterMaxPrice]);
+    fetch("/api/shop")
+      .then((r) => r.json())
+      .then((data) => { setSuggestions(data.suggestions || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
-  const filtered = suggestions; // Already filtered server-side
+  const categories = ["all", ...new Set(suggestions.map((s) => s.type))];
+  const filtered = category === "all" ? suggestions : suggestions.filter((s) => s.type === category);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white px-4 sm:px-6 py-6 sm:py-8">
-      {/* Header */}
-      <header className="border-b border-white/10 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg sm:text-xl font-bold">
-            ⚡ <span className="text-[#e879f9]">Clad</span> — Shop
-          </h1>
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px' }}>
+      <PageHeader
+        title="Shop Smart"
+        description="AI-curated suggestions to fill gaps and expand your style."
+        badge="Shop"
+      />
+
+      {/* Category Filter */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+        {categories.map((cat) => (
           <button
-            onClick={() => router.push("/wardrobe")}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            key={cat}
+            onClick={() => setCategory(cat)}
+            style={{
+              padding: '6px 16px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: 12,
+              fontWeight: 600,
+              fontFamily: 'var(--font-body)',
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+              border: '1px solid',
+              textTransform: 'capitalize',
+              ...(cat === category
+                ? { background: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' }
+                : { background: 'var(--color-muted)', color: 'var(--color-muted-foreground)', borderColor: 'var(--color-border)' }),
+            }}
           >
-            ← Back to Wardrobe
+            {cat}
           </button>
+        ))}
+      </div>
+
+      {loading && <LoadingSkeleton type="card" rows={4} />}
+
+      {!loading && filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+          <p style={{ fontSize: 40, marginBottom: 12 }}>🛍️</p>
+          <h3 style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 8 }}>No suggestions yet</h3>
+          <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', marginBottom: 24 }}>Upload more items to your wardrobe to get personalized shopping suggestions.</p>
+          <button onClick={() => router.push("/upload")} className="btn-primary">📸 Upload Items</button>
         </div>
-      </header>
+      )}
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-        {/* Filters */}
-        <div className="glass-card rounded-xl p-4 space-y-3">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Filters</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilterCategory("")}
-              className={
-                "px-3 py-1.5 rounded-full text-xs font-medium transition-all " +
-                (!filterCategory ? "bg-[#e879f9] text-black" : "bg-white/5 text-gray-400 hover:bg-white/10")
-              }
-            >
-              All Items
-            </button>
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setFilterCategory(cat)}
-                className={
-                  "px-3 py-1.5 rounded-full text-xs font-medium transition-all capitalize " +
-                  (filterCategory === cat ? "bg-[#e879f9] text-black" : "bg-white/5 text-gray-400 hover:bg-white/10")
-                }
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap gap-2 mt-2">
-            <select
-              value={filterPlatform}
-              onChange={(e) => setFilterPlatform(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-[#e879f9] focus:outline-none"
-            >
-              <option value="">All Platforms</option>
-              {platforms.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-
-            <input
-              type="number"
-              value={filterMinPrice}
-              onChange={(e) => setFilterMinPrice(e.target.value)}
-              placeholder="Min $"
-              className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-[#e879f9] focus:outline-none"
-            />
-            <input
-              type="number"
-              value={filterMaxPrice}
-              onChange={(e) => setFilterMaxPrice(e.target.value)}
-              placeholder="Max $"
-              className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:border-[#e879f9] focus:outline-none"
-            />
-
-            <span className="text-xs text-gray-500 self-center ml-auto">
-              {filtered.length} items
-            </span>
-          </div>
-        </div>
-
-        {/* Loading Skeleton */}
-        {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="glass-card rounded-xl p-4 animate-pulse">
-                <div className="aspect-square bg-white/10 rounded-lg mb-3" />
-                <div className="h-4 bg-white/10 rounded w-3/4 mb-2" />
-                <div className="h-3 bg-white/10 rounded w-1/2" />
+      {!loading && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
+          {filtered.map((item) => (
+            <div key={item.id} className="card" style={{ padding: 20 }}>
+              {/* Color preview */}
+              <div style={{
+                height: 100,
+                borderRadius: 'var(--radius-md)',
+                background: item.color,
+                marginBottom: 14,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '1px solid var(--color-border)',
+              }}>
+                <span style={{ fontSize: 28 }}>{typeEmoji(item.type)}</span>
               </div>
-            ))}
-          </div>
-        )}
 
-        {/* Product Grid */}
-        {!loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((item) => {
-              const platformStyle = PLATFORM_COLORS[item.platform] || "bg-white/5 text-gray-300";
-              return (
-                <div key={item.id} className="glass-card rounded-xl overflow-hidden group">
-                  {/* Image Placeholder */}
-                  <div className="aspect-square bg-gradient-to-br from-white/5 to-white/[0.02] flex items-center justify-center relative overflow-hidden">
-                    <span className="text-4xl opacity-20 group-hover:opacity-40 transition-opacity">👔</span>
-                    <span className={"absolute top-2 left-2 text-[10px] px-2 py-0.5 rounded-full border font-medium " + platformStyle}>
-                      {item.platform}
-                    </span>
-                  </div>
+              <h4 style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 4 }}>{item.name}</h4>
+              <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', textTransform: 'capitalize', marginBottom: 8 }}>{item.type} · {item.color}</p>
 
-                  {/* Info */}
-                  <div className="p-4 space-y-2">
-                    <p className="font-medium text-sm leading-tight line-clamp-2">{item.productName}</p>
-                    <p className="text-xs text-gray-400 leading-relaxed">{item.reason}</p>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', fontFamily: 'var(--font-body)', marginBottom: 4 }}>${item.priceMin}–${item.priceMax}</p>
+              <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', marginBottom: 12 }}>via {item.platform}</p>
 
-                    <div className="flex items-center justify-between pt-2">
-                      <p className="text-lg font-bold text-[#e879f9]">${item.priceUsd}</p>
-                      <a
-                        href={item.affiliateUrl || item.productUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-primary px-3 py-1.5 rounded-lg text-xs font-medium no-underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Shop Now →
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+              {/* AI Reason */}
+              <div style={{ background: 'var(--color-muted)', borderRadius: 'var(--radius-md)', padding: '10px 12px', border: '1px solid var(--color-border)', marginBottom: 14 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-primary)', fontFamily: 'var(--font-body)', marginBottom: 4 }}>Why this item?</p>
+                <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', lineHeight: 1.5 }}>{item.reason}</p>
+              </div>
 
-        {/* Empty State */}
-        {!loading && filtered.length === 0 && (
-          <div className="glass-card rounded-xl p-12 text-center">
-            <p className="text-4xl mb-4">🛍️</p>
-            <p className="text-xl font-semibold">No items match your filters</p>
-            <button
-              onClick={() => { setFilterCategory(""); setFilterPlatform(""); setFilterMinPrice(""); setFilterMaxPrice(""); }}
-              className="mt-4 btn-secondary px-4 py-2 rounded-lg text-sm"
-            >
-              Clear Filters
-            </button>
-          </div>
-        )}
-      </main>
+              <a
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary"
+                style={{ display: 'block', textAlign: 'center', fontSize: 13, textDecoration: 'none' }}
+              >
+                Shop on {item.platform} →
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+function typeEmoji(type: string): string {
+  const map: Record<string, string> = { shirt: "👔", pants: "👖", jacket: "🧥", shoes: "👞", dress: "👗", skirt: "🩳", accessory: "🎀", hat: "🎩" };
+  return map[type] || "👕";
 }

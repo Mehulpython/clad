@@ -2,214 +2,119 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import StatCard from "@/components/ui/StatCard";
 
 interface StatsData {
-  overview: {
-    totalItems: number;
-    totalOutfits: number;
-    totalWears: number;
-    totalValue: number;
-    avgCostPerWear: number;
-    favoriteItems: number;
-    favoriteOutfits: number;
-    avgConfidence: number;
-    avgRating: number | null;
-    wornOutfitRate: number;
-  };
-  categoryBreakdown: Record<string, number>;
-  colorBreakdown: [string, number][];
-  topWornItem: { name: string; wears: number } | null;
-  formalityDistribution: Record<number, number>;
-  seasonCoverage: Record<string, number>;
+  totalItems: number;
+  totalOutfits: number;
+  favoriteCount: number;
+  categoriesBreakdown: { category: string; count: number; color: string }[];
+  colorDistribution: { color: string; count: number }[];
+  mostWornType: string;
+  averageOutfitScore: number;
+  weeklyGenerations: number;
 }
 
 export default function StatsPage() {
   const router = useRouter();
-  const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<StatsData | null>(null);
 
   useEffect(() => {
     fetch("/api/stats")
       .then((r) => r.json())
-      .then((data) => {
-        setStats(data);
-        setLoading(false);
-      })
+      .then((data) => { setStats(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0f] text-white flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#e879f9] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!stats) return null;
-
-  const o = stats.overview;
-
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white px-4 sm:px-6 py-6 sm:py-8">
-      {/* Header */}
-      <header className="border-b border-white/10 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg sm:text-xl font-bold">
-            ⚡ <span className="text-[#e879f9]">Clad</span> — Statistics
-          </h1>
-          <button
-            onClick={() => router.push("/wardrobe")}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            ← Back to Wardrobe
-          </button>
-        </div>
-      </header>
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px' }}>
+      <PageHeader
+        title="Wardrobe Stats"
+        description="Insights into your wardrobe composition and usage patterns."
+        badge="Analytics"
+      />
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-        {/* Overview Cards */}
-        <section>
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
-            📊 Overview
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {[
-              { label: "Total Items", value: o.totalItems, emoji: "👔", color: "text-[#e879f9]" },
-              { label: "Outfits Created", value: o.totalOutfits, emoji: "✨", color: "text-blue-400" },
-              { label: "Times Worn", value: o.totalWears, emoji: "🔁", color: "text-green-400" },
-              { label: "Wardrobe Value", value: "$" + o.totalValue, emoji: "💰", color: "text-yellow-400" },
-              { label: "Cost/Wear", value: "$" + o.avgCostPerWear, emoji: "📉", color: "text-orange-400" },
-            ].map((stat) => (
-              <div key={stat.label} className="glass-card rounded-xl p-4 text-center">
-                <p className="text-xl mb-1">{stat.emoji}</p>
-                <p className={"text-2xl font-bold " + stat.color}>{stat.value}</p>
-                <p className="text-[11px] text-gray-500 mt-1">{stat.label}</p>
-              </div>
-            ))}
+      {loading && <LoadingSkeleton type="card" rows={2} />}
+
+      {!loading && stats && (
+        <>
+          {/* Top Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 32 }}>
+            <StatCard label="Total Items" value={stats.totalItems} icon="👕" />
+            <StatCard label="Outfits Created" value={stats.totalOutfits} icon="✨" />
+            <StatCard label="Favorites" value={stats.favoriteCount} icon="❤️" color="var(--color-secondary)" />
+            <StatCard label="Avg Score" value={stats.averageOutfitScore || 0} icon="⭐" color="var(--color-accent)" />
           </div>
-        </section>
 
-        {/* Secondary Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Favorites", value: o.favoriteItems, subtitle: "items" },
-            { label: "Avg Confidence", value: (o.avgConfidence * 100).toFixed(0) + "%", subtitle: "outfit quality" },
-            { label: "Worn Rate", value: o.wornOutfitRate + "%", subtitle: "of outfits worn" },
-            { label: "Avg Rating", value: o.avgRating ? o.avgRating.toFixed(1) + "/5" : "—", subtitle: "user rated" },
-          ].map((stat) => (
-            <div key={stat.label} className="glass-card rounded-xl p-4 text-center">
-              <p className="text-lg font-bold text-white">{stat.value}</p>
-              <p className="text-xs text-gray-400">{stat.label}</p>
-              <p className="text-[10px] text-gray-600">{stat.subtitle}</p>
-            </div>
-          ))}
-        </div>
+          {/* Category Breakdown */}
+          <div className="card-static" style={{ padding: 24, marginBottom: 16 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 16 }}>Category Breakdown</h3>
+            {stats.categoriesBreakdown.length === 0 ? (
+              <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>No data yet. Upload items to see breakdown.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {stats.categoriesBreakdown.map((cat) => {
+                  const pct = stats.totalItems > 0 ? (cat.count / stats.totalItems) * 100 : 0;
+                  return (
+                    <div key={cat.category}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-body)', textTransform: 'capitalize' }}>{cat.category}</span>
+                        <span style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>{cat.count} items ({Math.round(pct)}%)</span>
+                      </div>
+                      <div style={{ height: 8, borderRadius: 4, background: 'var(--color-muted)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 4, background: cat.color || 'var(--color-primary)', width: `${pct}%`, transition: 'width 500ms ease' }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-        {/* Category Breakdown */}
-        <section className="glass-card rounded-xl p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-            📦 Category Breakdown
-          </h2>
-          <div className="space-y-3">
-            {Object.entries(stats.categoryBreakdown)
-              .sort((a, b) => b[1] - a[1])
-              .map(([category, count]) => {
-                const maxCount = Math.max(...Object.values(stats.categoryBreakdown), 1);
-                const pct = Math.round((count / maxCount) * 100);
-                return (
-                  <div key={category} className="space-y-1">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="capitalize font-medium">{category}</span>
-                      <span className="text-gray-400">{count}</span>
-                    </div>
-                    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#e879f9] to-purple-500 rounded-full transition-all duration-700"
-                        style={{ width: pct + "%" }}
-                      />
-                    </div>
+          {/* Color Distribution */}
+          <div className="card-static" style={{ padding: 24, marginBottom: 16 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 16 }}>Color Distribution</h3>
+            {stats.colorDistribution.length === 0 ? (
+              <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>No data yet.</p>
+            ) : (
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {stats.colorDistribution.map((c, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: c.color, border: '2px solid var(--color-border)' }} />
+                    <span style={{ fontSize: 12, fontFamily: 'var(--font-body)', color: 'var(--color-muted-foreground)' }}>{c.count}×</span>
                   </div>
-                );
-              })}
-          </div>
-        </section>
-
-        {/* Color Breakdown */}
-        <section className="glass-card rounded-xl p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-            🎨 Top Colors
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {stats.colorBreakdown.map(([color, count]) => (
-              <div
-                key={color}
-                className="flex items-center gap-2 bg-white/5 rounded-full px-4 py-2"
-              >
-                <span className="text-xs capitalize">{color}</span>
-                <span className="text-xs text-gray-500">({count})</span>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        </section>
 
-        {/* Most Worn Item */}
-        {stats.topWornItem && (
-          <section className="glass-card rounded-xl p-6 border border-yellow-500/20">
-            <h2 className="text-sm font-semibold text-yellow-400 uppercase tracking-wider mb-2">
-              👑 Most Worn Item
-            </h2>
-            <p className="font-medium text-lg">{stats.topWornItem.name}</p>
-            <p className="text-sm text-gray-400">Worn {stats.topWornItem.wears} times</p>
-          </section>
-        )}
-
-        {/* Formality Distribution */}
-        <section className="glass-card rounded-xl p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-            🎭 Formality Distribution
-          </h2>
-          <div className="grid grid-cols-5 gap-2">
-            {[
-              { level: 1, label: "Casual" },
-              { level: 2, label: "Daily" },
-              { level: 3, label: "Smart Casual" },
-              { level: 4, label: "Business" },
-              { level: 5, label: "Formal" },
-            ].map((f) => {
-              const count = stats.formalityDistribution[f.level] || 0;
-              return (
-                <div key={f.level} className="bg-white/5 rounded-lg p-3 text-center">
-                  <p className="text-lg font-bold">{count}</p>
-                  <p className="text-[10px] text-gray-500 leading-tight mt-1">{f.label}</p>
-                </div>
-              );
-            })}
+          {/* Quick Actions */}
+          <div className="card-static" style={{ padding: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 16 }}>Quick Actions</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+              {[
+                { label: "Gap Analysis", icon: "🔍", action: () => router.push("/gap-analysis") },
+                { label: "Generate Outfit", icon: "✨", action: () => router.push("/generate") },
+                { label: "Weekly Planner", icon: "📅", action: () => router.push("/planner") },
+                { label: "Shop Suggestions", icon: "🛍️", action: () => router.push("/shop") },
+              ].map((item) => (
+                <button key={item.label} onClick={item.action} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '14px 16px', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-muted)', border: '1px solid var(--color-border)',
+                  cursor: 'pointer', fontSize: 14, fontFamily: 'var(--font-body)', fontWeight: 600, color: 'var(--color-foreground)',
+                  transition: 'all 150ms ease',
+                }}>
+                  <span>{item.icon}</span> {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </section>
-
-        {/* Season Coverage */}
-        <section className="glass-card rounded-xl p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
-            🌤️ Season Coverage
-          </h2>
-          <div className="grid grid-cols-4 gap-3">
-            {Object.entries(stats.seasonCoverage).map(([season, count]) => {
-              const emojis: Record<string, string> = {
-                spring: "🌸", summer: "☀️", fall: "🍂", winter: "❄️",
-                "all-season": "🔄",
-              };
-              return (
-                <div key={season} className="bg-white/5 rounded-lg p-3 text-center">
-                  <p className="text-lg">{emojis[season] || "📌"}</p>
-                  <p className="text-sm font-bold mt-1 capitalize">{season.replace("-", " ")}</p>
-                  <p className="text-xs text-gray-400">{count} items</p>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      </main>
+        </>
+      )}
     </div>
   );
 }

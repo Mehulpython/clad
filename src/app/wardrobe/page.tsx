@@ -1,29 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Search,
-  Heart,
-  ShirtIcon as Laundry,
-  Grid3X3,
-  List,
-  Shirt,
-  X,
-  Filter,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import type { WardrobeItem } from "@/lib/types";
 
 const CATEGORIES = [
-  { value: "", label: "All", icon: null },
-  { value: "tops", label: "Tops", icon: "\uD83D\uDC55" },
-  { value: "bottoms", label: "Bottoms", icon: "\uD83D\uDC56" },
-  { value: "dresses", label: "Dresses", icon: "\uD83D\uDC57" },
-  { value: "outerwear", label: "Outerwear", icon: "\uD83E\uDDE5" },
-  { value: "footwear", label: "Footwear", icon: "\uD83D\uDC5F" },
-  { value: "accessories", label: "Accessories", icon: "\uD83D\uDC5C" },
+  { value: "", label: "All", icon: "" },
+  { value: "tops", label: "Tops", icon: "👔" },
+  { value: "bottoms", label: "Bottoms", icon: "👖" },
+  { value: "dresses", label: "Dresses", icon: "👗" },
+  { value: "outerwear", label: "Outerwear", icon: "🧥" },
+  { value: "footwear", label: "Footwear", icon: "👞" },
+  { value: "accessories", label: "Accessories", icon: "👜" },
 ];
 
 export default function WardrobePage() {
+  const router = useRouter();
   const [items, setItems] = useState<WardrobeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,62 +31,27 @@ export default function WardrobePage() {
       const params = new URLSearchParams();
       if (activeCategory) params.set("category", activeCategory);
       if (searchQuery) params.set("color", searchQuery);
-
       const res = await fetch("/api/wardrobe?" + params.toString());
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data.items || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch wardrobe:", err);
-    }
+      if (res.ok) { const data = await res.json(); setItems(data.items || []); }
+    } catch (err) { console.error("Failed to fetch wardrobe:", err); }
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchWardrobe();
-  }, [activeCategory]);
-
-  // Debounced search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery !== undefined) fetchWardrobe();
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  useEffect(() => { fetchWardrobe(); }, [activeCategory]);
+  useEffect(() => { const t = setTimeout(() => fetchWardrobe(), 400); return () => clearTimeout(t); }, [searchQuery]);
 
   const toggleFavorite = async (id: string) => {
-    const item = items.find((i) => i.id === id);
-    if (!item) return;
-
-    await fetch("/api/wardrobe/" + id, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_favorite: !item.isFavorite }),
-    });
-
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, isFavorite: !i.isFavorite } : i
-      )
-    );
+    const item = items.find((i) => i.id === id); if (!item) return;
+    await fetch("/api/wardrobe/" + id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ is_favorite: !item.isFavorite }) });
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, isFavorite: !i.isFavorite } : i));
+    if (selectedItem?.id === id) setSelectedItem((prev) => prev ? { ...prev, isFavorite: !prev.isFavorite } : null);
   };
 
   const toggleLaundry = async (id: string) => {
-    const item = items.find((i) => i.id === id);
-    if (!item) return;
-
-    await fetch("/api/wardrobe/" + id, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_in_laundry: !item.isInLaundry }),
-    });
-
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === id ? { ...i, isInLaundry: !i.isInLaundry } : i
-      )
-    );
+    const item = items.find((i) => i.id === id); if (!item) return;
+    await fetch("/api/wardrobe/" + id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ is_in_laundry: !item.isInLaundry }) });
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, isInLaundry: !i.isInLaundry } : i));
+    if (selectedItem?.id === id) setSelectedItem((prev) => prev ? { ...prev, isInLaundry: !prev.isInLaundry } : null);
   };
 
   const deleteItem = async (id: string) => {
@@ -101,464 +60,237 @@ export default function WardrobePage() {
     if (selectedItem?.id === id) setSelectedItem(null);
   };
 
+  const pillStyle = (active: boolean): React.CSSProperties => ({
+    padding: '6px 16px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600,
+    fontFamily: 'var(--font-body)', cursor: 'pointer', transition: 'all 150ms ease', border: '1px solid',
+    whiteSpace: 'nowrap' as const,
+    ...(active ? { background: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' }
+      : { background: 'var(--color-muted)', color: 'var(--color-muted-foreground)', borderColor: 'var(--color-border)' }),
+  });
+
+  const laundryCount = items.filter((i) => i.isInLaundry).length;
+
   return (
-    <main className="min-h-screen px-3 sm:px-4 py-6 sm:py-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">My Wardrobe</h1>
-            <p className="text-gray-400 text-sm mt-1">
-              {items.length} item{items.length !== 1 ? "s" : ""}
-              {items.filter((i) => i.isInLaundry).length > 0
-                ? " \u00b7 " + items.filter((i) => i.isInLaundry).length + " in laundry"
-                : ""}
-            </p>
-          </div>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px' }}>
+      <PageHeader
+        title="My Wardrobe"
+        description={`${items.length} item${items.length !== 1 ? "s" : ""}${laundryCount > 0 ? ` · ${laundryCount} in laundry` : ""}`}
+        action={<button onClick={() => router.push("/upload")} className="btn-primary" style={{ fontSize: 13 }}>+ Add Items</button>}
+      />
 
-          <div className="flex items-center gap-3">
-            <a href="/upload" className="btn-primary text-sm py-2.5">
-              + Add Items
-            </a>
-          </div>
+      {/* Filters */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flex: '1 1 200px', maxWidth: 320 }}>
+          <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14 }}>🔍</span>
+          <input
+            type="text" placeholder="Search by color, type..." value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input"
+            style={{ paddingLeft: 36, width: '100%' }}
+          />
         </div>
 
-        {/* Filters bar */}
-        <div className="flex flex-wrap items-center gap-3 mb-8">
-          {/* Search */}
-          <div className="relative flex-1 min-w-0 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search by color, type..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-sm focus:border-purple-500/50 focus:outline-none transition-colors"
-            />
-          </div>
-
-          {/* Category pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => setActiveCategory(cat.value)}
-                className={
-                  "px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all " +
-                  (activeCategory === cat.value
-                    ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.04]")
-                }
-              >
-                {cat.icon && <span className="mr-1">{cat.icon}</span>}
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* View toggle */}
-          <div className="flex items-center gap-0.5 bg-white/[0.04] rounded-lg p-0.5 ml-auto">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={
-                "p-1.5 rounded " +
-                (viewMode === "grid"
-                  ? "bg-purple-500/20 text-purple-300"
-                  : "text-gray-500")
-              }
-            >
-              <Grid3X3 className="w-4 h-4" />
+        {/* Categories */}
+        <div style={{ display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 2 }}>
+          {CATEGORIES.map((cat) => (
+            <button key={cat.value} onClick={() => setActiveCategory(cat.value)} style={pillStyle(activeCategory === cat.value)}>
+              {cat.icon && <span>{cat.icon} </span>}{cat.label}
             </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={
-                "p-1.5 rounded " +
-                (viewMode === "list"
-                  ? "bg-purple-500/20 text-purple-300"
-                  : "text-gray-500")
-              }
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
+          ))}
         </div>
 
-        {/* Empty state */}
-        {!loading && items.length === 0 && (
-          <div className="text-center py-24">
-            <Shirt className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-            <h2 className="text-xl font-semibold mb-2">Your wardrobe is empty</h2>
-            <p className="text-gray-400 mb-6 max-w-md mx-auto">
-              Upload photos of your clothing to get started. Our AI will identify each piece automatically.
-            </p>
-            <a href="/upload" className="btn-primary">
-              Upload Your First Item &rarr;
-            </a>
-          </div>
-        )}
+        {/* View toggle */}
+        <div style={{ display: 'flex', gap: 2, background: 'var(--color-muted)', borderRadius: 'var(--radius-md)', padding: 3, marginLeft: 'auto', border: '1px solid var(--color-border)' }}>
+          {(["grid", "list"] as const).map((v) => (
+            <button key={v} onClick={() => setViewMode(v)} style={{
+              padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', transition: 'all 150ms ease', border: 'none',
+              ...(viewMode === v ? { background: 'var(--color-primary)', color: 'white' } : { background: 'transparent', color: 'var(--color-muted-foreground)' }),
+            }}>
+              {v === "grid" ? "▦" : "☰"}
+            </button>
+          ))}
+        </div>
+      </div>
 
-        {/* Loading state */}
-        {loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="glass-card animate-pulse">
-                <div className="aspect-[3/4] bg-white/5" />
-                <div className="p-3 space-y-2">
-                  <div className="h-4 bg-white/5 rounded w-3/4" />
-                  <div className="h-3 bg-white/5 rounded w-1/2" />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Empty */}
+      {!loading && items.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '80px 24px' }}>
+          <p style={{ fontSize: 48, marginBottom: 16 }}>👕</p>
+          <h3 style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 8 }}>Your wardrobe is empty</h3>
+          <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', maxWidth: 400, margin: '0 auto 24px' }}>
+            Upload photos of your clothing to get started. Our AI will identify each piece automatically.
+          </p>
+          <button onClick={() => router.push("/upload")} className="btn-primary">Upload Your First Item →</button>
+        </div>
+      )}
 
-        {/* Items grid */}
-        {!loading && items.length > 0 && viewMode === "grid" && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => setSelectedItem(item)}
-                className={
-                  "glass-card overflow-hidden cursor-pointer group hover:border-purple-500/30 transition-all duration-200 " +
-                  (item.isInLaundry ? "opacity-50" : "")
-                }
-              >
-                {/* Image */}
-                <div className="aspect-[3/4] relative bg-black/30 overflow-hidden">
-                  <img
-                    src={item.imageUrl}
-                    alt={item.suggestedName || item.itemType}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='267'%3E%3Crect fill='%231a1a25' width='200' height='267'/%3E%3Ctext x='100' y='130' fill='%23666' text-anchor='middle' dominant-baseline='middle' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E";
-                    }}
-                  />
+      {/* Loading */}
+      {loading && <LoadingSkeleton type="card" rows={5} />}
 
-                  {/* Badges */}
-                  <div className="absolute top-2 left-2 flex flex-col gap-1">
-                    {item.isFavorite && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-pink-500/80 text-white">
-                        \u2665 Favorite
-                      </span>
-                    )}
-                    {item.isInLaundry && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/80 text-white">
-                        \uD83E\uDDFA Laundry
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Quick actions on hover */}
-                  <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(item.id);
-                      }}
-                      className={
-                        "w-7 h-7 rounded-full flex items-center justify-center " +
-                        (item.isFavorite
-                          ? "bg-pink-500 text-white"
-                          : "bg-black/60 text-white")
-                      }
-                    >
-                      <Heart
-                        className={
-                          "w-3.5 h-3.5 " +
-                          (item.isFavorite ? "fill-current" : "")
-                        }
-                      />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleLaundry(item.id);
-                      }}
-                      className="w-7 h-7 rounded-full bg-black/60 text-white flex items-center justify-center"
-                    >
-                      <Laundry className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="p-3">
-                  <p className="font-medium text-sm truncate">
-                    {item.suggestedName || item.itemType}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300">
-                      {item.itemType}
-                    </span>
-                    <span className="text-[11px] text-gray-500">
-                      {item.primaryColor}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Items list view */}
-        {!loading && items.length > 0 && viewMode === "list" && (
-          <div className="space-y-2">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => setSelectedItem(item)}
-                className="glass-card p-3 flex items-center gap-4 cursor-pointer hover:border-purple-500/30 transition-colors"
-              >
-                <img
-                  src={item.imageUrl}
-                  alt=""
-                  className="w-14 h-14 object-cover rounded-lg"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src =
-                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect fill='%231a1a25' width='56' height='56'/%3E%3C/text%3E%3C/svg%3E";
-                  }}
+      {/* Grid View */}
+      {!loading && items.length > 0 && viewMode === "grid" && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 16 }}>
+          {items.map((item) => (
+            <div key={item.id} onClick={() => setSelectedItem(item)} style={{
+              borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)', cursor: 'pointer', transition: 'all 200ms ease',
+              opacity: item.isInLaundry ? 0.5 : 1,
+            }}>
+              <div style={{ aspectRatio: '3/4', position: 'relative', background: 'var(--color-muted)', overflow: 'hidden' }}>
+                <img src={item.imageUrl} alt={item.suggestedName || item.itemType} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 300ms ease' }}
+                  onError={(e) => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='267'%3E%3Crect fill='%23f3e8ef' width='200' height='267'/%3E%3Ctext x='100' y='130' fill='%23999' text-anchor='middle' dominant-baseline='middle' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E"; }}
                 />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">
-                    {item.suggestedName || item.itemType}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {item.primaryColor}
-                    {item.secondaryColor ? " / " + item.secondaryColor : ""} \u00b7{" "}
-                    {item.pattern} \u00b7 {item.wearCount}x worn
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300">
-                    {item.category}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(item.id);
-                    }}
-                    className={
-                      "p-1.5 rounded " +
-                      (item.isFavorite ? "text-pink-400" : "text-gray-500")
-                    }
-                  >
-                    <Heart
-                      className={
-                        "w-4 h-4 " +
-                        (item.isFavorite ? "fill-current" : "")
-                      }
-                    />
-                  </button>
+                {/* Badges */}
+                <div style={{ position: 'absolute', top: 6, left: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {item.isFavorite && <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: 'var(--color-secondary)', color: 'white', fontWeight: 700 }}>♥ Fav</span>}
+                  {item.isInLaundry && <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: '#2563EB', color: 'white', fontWeight: 700 }}>🧺 Laundry</span>}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Detail modal */}
-        {selectedItem && (
-          <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm"
-            onClick={() => setSelectedItem(null)}
-          >
-            <div
-              className="glass-card w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-start justify-between p-4 border-b border-white/5">
-                <div>
-                  <h2 className="text-lg font-semibold">
-                    {selectedItem.suggestedName || selectedItem.itemType}
-                  </h2>
-                  <p className="text-sm text-gray-400 mt-0.5">
-                    Added {new Date(selectedItem.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedItem(null)}
-                  className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="p-4 grid md:grid-cols-2 gap-6">
-                {/* Image */}
-                <img
-                  src={selectedItem.imageUrl}
-                  alt=""
-                  className="w-full aspect-[3/4] object-cover rounded-xl"
-                />
-
-                {/* Details */}
-                <div className="space-y-4">
-                  {/* AI Tags */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
-                      AI Analysis
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="bg-white/[0.03] rounded-lg p-2.5">
-                        <p className="text-xs text-gray-500">Type</p>
-                        <p className="font-medium capitalize">{selectedItem.itemType}</p>
-                      </div>
-                      <div className="bg-white/[0.03] rounded-lg p-2.5">
-                        <p className="text-xs text-gray-500">Color(s)</p>
-                        <p className="font-medium capitalize">
-                          {selectedItem.primaryColor}
-                          {selectedItem.secondaryColor
-                            ? " / " + selectedItem.secondaryColor
-                            : ""}
-                        </p>
-                      </div>
-                      <div className="bg-white/[0.03] rounded-lg p-2.5">
-                        <p className="text-xs text-gray-500">Pattern</p>
-                        <p className="font-medium capitalize">{selectedItem.pattern}</p>
-                      </div>
-                      <div className="bg-white/[0.03] rounded-lg p-2.5">
-                        <p className="text-xs text-gray-500">Material</p>
-                        <p className="font-medium capitalize">
-                          {selectedItem.material || "Unknown"}
-                        </p>
-                      </div>
-                      <div className="bg-white/[0.03] rounded-lg p-2.5">
-                        <p className="text-xs text-gray-500">Formality</p>
-                        <p className="font-medium">
-                          {[
-                            "",
-                            "Home/Athleisure",
-                            "Casual",
-                            "Smart Casual",
-                            "Business/Formal",
-                            "Black Tie",
-                          ][selectedItem.formalityLevel]}
-                        </p>
-                      </div>
-                      <div className="bg-white/[0.03] rounded-lg p-2.5">
-                        <p className="text-xs text-gray-500">Confidence</p>
-                        <p className="font-medium">
-                          {Math.round(selectedItem.aiConfidence * 100)}%
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Occasions & Seasons */}
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedItem.occasions.map((occ) => (
-                        <span
-                          key={occ}
-                          className="text-xs px-2 py-0.5 rounded-full bg-green-500/15 text-green-300"
-                        >
-                          {occ}
-                        </span>
-                      ))}
-                      {selectedItem.seasons.map((s) => (
-                        <span
-                          key={s}
-                          className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-300"
-                        >
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Tags */}
-                    {selectedItem.tags?.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {selectedItem.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="text-[11px] px-1.5 py-0.5 rounded bg-white/5 text-gray-400"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* User info */}
-                  {(selectedItem.brand || selectedItem.size || selectedItem.priceUsd) && (
-                    <div className="space-y-2 pt-3 border-t border-white/5">
-                      <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
-                        Details
-                      </h3>
-                      {selectedItem.brand && (
-                        <p className="text-sm">
-                          <span className="text-gray-500">Brand:</span> {selectedItem.brand}
-                        </p>
-                      )}
-                      {selectedItem.size && (
-                        <p className="text-sm">
-                          <span className="text-gray-500">Size:</span> {selectedItem.size}
-                        </p>
-                      )}
-                      {selectedItem.priceUsd && (
-                        <p className="text-sm">
-                          <span className="text-gray-500">Price:</span> ${selectedItem.priceUsd}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Stats */}
-                  <div className="pt-3 border-t border-white/5">
-                    <p className="text-xs text-gray-500">
-                      Worn {selectedItem.wearCount} time
-                      {selectedItem.wearCount !== 1 ? "s" : ""}
-                      {selectedItem.lastWornAt
-                        ? " \u00b7 Last worn " +
-                          new Date(selectedItem.lastWornAt).toLocaleDateString()
-                        : ""}
-                    </p>
-                  </div>
+              <div style={{ padding: 10 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.suggestedName || item.itemType}</p>
+                <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: 'rgba(190,24,93,0.06)', fontWeight: 600, color: 'var(--color-primary)', fontFamily: 'var(--font-body)' }}>{item.itemType}</span>
+                  <span style={{ fontSize: 10, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>{item.primaryColor}</span>
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-              {/* Actions */}
-              <div className="p-4 border-t border-white/5 flex items-center justify-between">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => toggleFavorite(selectedItem.id)}
-                    className={
-                      "btn-secondary text-sm " +
-                      (selectedItem.isFavorite
-                        ? "!border-pink-500 !text-pink-400"
-                        : "")
-                    }
-                  >
-                    {selectedItem.isFavorite ? "\u2665 Favorited" : "\u2661 Favorite"}
-                  </button>
-                  <button
-                    onClick={() => toggleLaundry(selectedItem.id)}
-                    className={
-                      "btn-secondary text-sm " +
-                      (selectedItem.isInLaundry
-                        ? "!border-blue-500 !text-blue-400"
-                        : "")
-                    }
-                  >
-                    {selectedItem.isInLaundry
-                      ? "\uD83E\uDDFA In Laundry"
-                      : "\uD83E\uDDFA Add to Laundry"}
-                  </button>
-                </div>
-                <button
-                  onClick={() => deleteItem(selectedItem.id)}
-                  className="text-sm text-red-400 hover:text-red-300 transition-colors"
-                >
-                  Delete
+      {/* List View */}
+      {!loading && items.length > 0 && viewMode === "list" && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {items.map((item) => (
+            <div key={item.id} onClick={() => setSelectedItem(item)} style={{
+              display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px',
+              borderRadius: 'var(--radius-md)', background: 'var(--color-surface)',
+              border: '1px solid var(--color-border)', cursor: 'pointer', transition: 'all 150ms ease',
+            }}>
+              <img src={item.imageUrl} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 'var(--radius-sm)' }}
+                onError={(e) => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Crect fill='%23f3e8ef' width='48' height='48'/%3E%3C/svg%3E"; }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.suggestedName || item.itemType}</p>
+                <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                  {item.primaryColor}{item.secondaryColor ? " / " + item.secondaryColor : ""} · {item.pattern} · {item.wearCount}× worn
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 'var(--radius-full)', background: 'rgba(190,24,93,0.06)', fontWeight: 600, color: 'var(--color-primary)', fontFamily: 'var(--font-body)' }}>{item.category}</span>
+                <button onClick={(e) => { e.stopPropagation(); toggleFavorite(item.id); }} style={{ fontSize: 16, background: 'none', border: 'none', cursor: 'pointer', color: item.isFavorite ? 'var(--color-secondary)' : 'var(--color-muted-foreground)' }}>
+                  {item.isFavorite ? "❤️" : "🤍"}
                 </button>
               </div>
             </div>
+          ))}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {selectedItem && (
+        <div onClick={() => setSelectedItem(null)} style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg)', borderRadius: 'var(--radius-xl)', maxWidth: 720, width: '100%', maxHeight: '90vh', overflow: 'auto', border: '1px solid var(--color-border)', boxShadow: '0 25px 50px rgba(0,0,0,0.15)' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--color-border)' }}>
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-display)' }}>{selectedItem.suggestedName || selectedItem.itemType}</h2>
+                <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', marginTop: 2 }}>Added {new Date(selectedItem.createdAt).toLocaleDateString()}</p>
+              </div>
+              <button onClick={() => setSelectedItem(null)} style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', background: 'var(--color-muted)', border: '1px solid var(--color-border)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-muted-foreground)' }}>×</button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+              {/* Image */}
+              <img src={selectedItem.imageUrl} alt="" style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }} />
+
+              {/* Details */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>AI Analysis</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    {[
+                      { label: "Type", value: selectedItem.itemType },
+                      { label: "Color(s)", value: selectedItem.primaryColor + (selectedItem.secondaryColor ? " / " + selectedItem.secondaryColor : "") },
+                      { label: "Pattern", value: selectedItem.pattern },
+                      { label: "Material", value: selectedItem.material || "Unknown" },
+                      { label: "Formality", value: ["", "Home/Athleisure", "Casual", "Smart Casual", "Business/Formal", "Black Tie"][selectedItem.formalityLevel] },
+                      { label: "Confidence", value: Math.round(selectedItem.aiConfidence * 100) + "%" },
+                    ].map((f) => (
+                      <div key={f.label} style={{ background: 'var(--color-muted)', borderRadius: 'var(--radius-md)', padding: '10px 12px', border: '1px solid var(--color-border)' }}>
+                        <p style={{ fontSize: 10, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', marginBottom: 2 }}>{f.label}</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-body)', textTransform: 'capitalize' }}>{f.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Occasions & Seasons */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {selectedItem.occasions.map((occ) => (
+                    <span key={occ} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 'var(--radius-full)', background: 'rgba(5,150,105,0.06)', fontWeight: 600, color: 'var(--color-success)', fontFamily: 'var(--font-body)' }}>{occ}</span>
+                  ))}
+                  {selectedItem.seasons.map((s) => (
+                    <span key={s} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 'var(--radius-full)', background: 'rgba(217,119,6,0.06)', fontWeight: 600, color: 'var(--color-accent)', fontFamily: 'var(--font-body)' }}>{s}</span>
+                  ))}
+                </div>
+
+                {/* Tags */}
+                {selectedItem.tags?.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {selectedItem.tags.map((tag) => (
+                      <span key={tag} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: 'var(--color-muted)', color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', border: '1px solid var(--color-border)' }}>#{tag}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Details */}
+                {(selectedItem.brand || selectedItem.size || selectedItem.priceUsd) && (
+                  <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 12 }}>
+                    {selectedItem.brand && <p style={{ fontSize: 13, fontFamily: 'var(--font-body)' }}><span style={{ color: 'var(--color-muted-foreground)' }}>Brand:</span> {selectedItem.brand}</p>}
+                    {selectedItem.size && <p style={{ fontSize: 13, fontFamily: 'var(--font-body)' }}><span style={{ color: 'var(--color-muted-foreground)' }}>Size:</span> {selectedItem.size}</p>}
+                    {selectedItem.priceUsd && <p style={{ fontSize: 13, fontFamily: 'var(--font-body)' }}><span style={{ color: 'var(--color-muted-foreground)' }}>Price:</span> ${selectedItem.priceUsd}</p>}
+                  </div>
+                )}
+
+                <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                  Worn {selectedItem.wearCount}×{selectedItem.lastWornAt ? " · Last worn " + new Date(selectedItem.lastWornAt).toLocaleDateString() : ""}
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderTop: '1px solid var(--color-border)' }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => toggleFavorite(selectedItem.id)} style={{
+                  padding: '8px 16px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600,
+                  fontFamily: 'var(--font-body)', cursor: 'pointer', border: '1px solid',
+                  ...(selectedItem.isFavorite
+                    ? { background: 'rgba(236,72,153,0.06)', borderColor: 'var(--color-secondary)', color: 'var(--color-secondary)' }
+                    : { background: 'var(--color-muted)', borderColor: 'var(--color-border)', color: 'var(--color-foreground)' }),
+                }}>
+                  {selectedItem.isFavorite ? "❤️ Favorited" : "🤍 Favorite"}
+                </button>
+                <button onClick={() => toggleLaundry(selectedItem.id)} style={{
+                  padding: '8px 16px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600,
+                  fontFamily: 'var(--font-body)', cursor: 'pointer', border: '1px solid',
+                  ...(selectedItem.isInLaundry
+                    ? { background: 'rgba(37,99,235,0.06)', borderColor: '#2563EB', color: '#2563EB' }
+                    : { background: 'var(--color-muted)', borderColor: 'var(--color-border)', color: 'var(--color-foreground)' }),
+                }}>
+                  {selectedItem.isInLaundry ? "🧺 In Laundry" : "🧺 Add to Laundry"}
+                </button>
+              </div>
+              <button onClick={() => deleteItem(selectedItem.id)} style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-destructive)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)' }}>
+                Delete
+              </button>
+            </div>
           </div>
-        )}
-      </div>
-    </main>
+        </div>
+      )}
+    </div>
   );
 }

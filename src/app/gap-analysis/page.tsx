@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import StatCard from "@/components/ui/StatCard";
 
 interface GapSuggestion {
   name: string;
@@ -21,11 +24,11 @@ interface WardrobeGap {
   combinationsUnlocked: number;
 }
 
-const PRIORITY_CONFIG = {
-  critical: { color: "text-red-400", bg: "bg-red-500/20", border: "border-red-500/30", emoji: "🔴" },
-  high:    { color: "text-orange-400", bg: "bg-orange-500/20", border: "border-orange-500/30", emoji: "🟠" },
-  medium:  { color: "text-yellow-400", bg: "bg-yellow-500/20", border: "border-yellow-500/30", emoji: "🟡" },
-  low:     { color: "text-green-400", bg: "bg-green-500/20", border: "border-green-500/30", emoji: "🟢" },
+const PRIORITY_STYLES: Record<string, { bg: string; border: string; color: string; emoji: string }> = {
+  critical: { bg: "rgba(220,38,38,0.06)", border: "rgba(220,38,38,0.25)", color: "#DC2626", emoji: "🔴" },
+  high:    { bg: "rgba(234,88,12,0.06)", border: "rgba(234,88,12,0.25)", color: "#EA580C", emoji: "🟠" },
+  medium:  { bg: "rgba(202,138,4,0.06)", border: "rgba(202,138,4,0.25)", color: "#CA8A04", emoji: "🟡" },
+  low:     { bg: "rgba(5,150,105,0.06)", border: "rgba(5,150,105,0.25)", color: "#059669", emoji: "🟢" },
 };
 
 export default function GapAnalysisPage() {
@@ -51,137 +54,104 @@ export default function GapAnalysisPage() {
     }
   }
 
-  useEffect(() => {
-    loadAnalysis();
-  }, []);
+  useEffect(() => { loadAnalysis(); }, []);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white px-4 sm:px-6 py-6 sm:py-8">
-      {/* Header */}
-      <header className="border-b border-white/10 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg sm:text-xl font-bold">
-            ⚡ <span className="text-[#e879f9]">Clad</span> — Wardrobe Gaps
-          </h1>
-          <button
-            onClick={() => router.push("/wardrobe")}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            ← Back to Wardrobe
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {/* Summary Bar */}
-        <div className="glass-card rounded-xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">📊</span>
-            <div>
-              <p className="font-semibold">{totalItems} items in wardrobe</p>
-              <p className="text-sm text-gray-400">
-                {gaps.length === 0 ? "Looking good!" : gaps.length + " gap(s) identified"}
-              </p>
-            </div>
-          </div>
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px' }}>
+      <PageHeader
+        title="Wardrobe Gap Analysis"
+        description="Find what's missing from your wardrobe and get smart suggestions."
+        badge="AI-Powered"
+        action={
           <button
             onClick={() => { setAnalyzing(true); loadAnalysis().finally(() => setAnalyzing(false)); }}
             disabled={analyzing}
-            className="btn-primary px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+            className="btn-secondary"
+            style={{ fontSize: 13 }}
           >
             {analyzing ? "Analyzing..." : "🔄 Re-analyze"}
           </button>
+        }
+      />
+
+      {/* Summary */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
+        <StatCard label="Total Items" value={totalItems} icon="👕" color="var(--color-primary)" />
+        <StatCard label="Gaps Found" value={gaps.length} icon="🔍" color="var(--color-accent)" />
+        <StatCard
+          label="Combos Unlocked"
+          value={gaps.reduce((s, g) => s + g.combinationsUnlocked, 0)}
+          icon="✨"
+          color="var(--color-success)"
+        />
+      </div>
+
+      {/* AI Insights */}
+      {aiInsights && (
+        <div style={{ background: 'linear-gradient(135deg, rgba(190,24,93,0.04), rgba(236,72,153,0.04))', border: '1px solid var(--color-border-strong)', borderRadius: 'var(--radius-lg)', padding: 20, marginBottom: 24 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-primary)', fontFamily: 'var(--font-body)', marginBottom: 8 }}>✨ AI Insights</p>
+          <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', lineHeight: 1.7 }}>{aiInsights}</p>
         </div>
+      )}
 
-        {/* AI Insights */}
-        {aiInsights && (
-          <div className="glass-card rounded-xl p-5 border border-[#e879f9]/20">
-            <p className="text-sm font-semibold text-[#e879f9] mb-2">✨ AI Insights</p>
-            <p className="text-sm text-gray-300 leading-relaxed">{aiInsights}</p>
-          </div>
-        )}
+      {/* Loading */}
+      {loading && <LoadingSkeleton type="list" rows={3} />}
 
-        {/* Loading State */}
-        {loading && (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="glass-card rounded-xl p-6 animate-pulse">
-                <div className="h-4 bg-white/10 rounded w-1/3 mb-3" />
-                <div className="h-3 bg-white/10 rounded w-2/3" />
-              </div>
-            ))}
-          </div>
-        )}
+      {/* No Gaps */}
+      {!loading && gaps.length === 0 && (
+        <div className="card-static" style={{ padding: '64px 24px', textAlign: 'center' }}>
+          <p style={{ fontSize: 40, marginBottom: 12 }}>🎉</p>
+          <h3 style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-display)', color: 'var(--color-primary)', marginBottom: 8 }}>No Major Gaps!</h3>
+          <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>Your wardrobe is well-balanced. Keep building!</p>
+        </div>
+      )}
 
-        {/* Gap Cards */}
-        {!loading && gaps.length === 0 && (
-          <div className="glass-card rounded-xl p-12 text-center">
-            <p className="text-4xl mb-4">🎉</p>
-            <p className="text-xl font-semibold text-[#e879f9]">No Major Gaps!</p>
-            <p className="text-gray-400 mt-2">Your wardrobe is well-balanced. Keep building!</p>
-          </div>
-        )}
-
-        {!loading && gaps.map((gap, idx) => {
-          const cfg = PRIORITY_CONFIG[gap.priority];
-          return (
-            <div
-              key={idx}
-              className={"glass-card rounded-xl p-6 border " + cfg.border}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{cfg.emoji}</span>
-                  <h3 className="font-semibold capitalize">{gap.category.replace(/-/g, " ")}</h3>
-                  <span className={"text-xs px-2 py-0.5 rounded-full font-medium " + cfg.bg + " " + cfg.color}>
-                    {gap.priority.toUpperCase()}
-                  </span>
-                </div>
-                <span className="text-xs text-gray-500">
-                  Unlocks ~{gap.combinationsUnlocked} combos
+      {/* Gap Cards */}
+      {!loading && gaps.map((gap, idx) => {
+        const cfg = PRIORITY_STYLES[gap.priority];
+        return (
+          <div key={idx} style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-lg)', padding: 24, marginBottom: 16, border: `1px solid ${cfg.border}` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>{cfg.emoji}</span>
+                <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)', textTransform: 'capitalize' }}>{gap.category.replace(/-/g, " ")}</h3>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-full)', background: cfg.bg, color: cfg.color, fontFamily: 'var(--font-body)', letterSpacing: '0.04em' }}>
+                  {gap.priority.toUpperCase()}
                 </span>
               </div>
+              <span style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                Unlocks ~{gap.combinationsUnlocked} combos
+              </span>
+            </div>
 
-              <p className="text-sm text-gray-300 mb-4 leading-relaxed">{gap.description}</p>
+            <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', lineHeight: 1.7, marginBottom: 16 }}>{gap.description}</p>
 
-              {gap.suggestedItems.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Suggestions</p>
-                  {gap.suggestedItems.map((suggestion, sIdx) => (
-                    <div
-                      key={sIdx}
-                      className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-3"
-                    >
+            {gap.suggestedItems.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Suggestions</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {gap.suggestedItems.map((s, sIdx) => (
+                    <div key={sIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-muted)', borderRadius: 'var(--radius-md)', padding: '12px 16px', border: '1px solid var(--color-border)' }}>
                       <div>
-                        <p className="text-sm font-medium">{suggestion.name}</p>
-                        <p className="text-xs text-gray-400">
-                          {suggestion.type} · {suggestion.color}
-                        </p>
+                        <p style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-body)' }}>{s.name}</p>
+                        <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>{s.type} · {s.color}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-[#e879f9]">
-                          ${suggestion.estimatedPriceMin}-${suggestion.estimatedPriceMax}
-                        </p>
-                        {suggestion.platform && (
-                          <p className="text-xs text-gray-500">{suggestion.platform}</p>
-                        )}
+                      <div style={{ textAlign: 'right' }}>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-primary)', fontFamily: 'var(--font-body)' }}>${s.estimatedPriceMin}–${s.estimatedPriceMax}</p>
+                        {s.platform && <p style={{ fontSize: 11, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>{s.platform}</p>}
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Shop Button */}
-              <button
-                onClick={() => router.push("/shop?category=" + encodeURIComponent(gap.category))}
-                className="mt-4 w-full btn-secondary py-2 rounded-lg text-sm font-medium"
-              >
-                🛒 Shop Suggestions for {gap.category.replace(/-/g, " ")}
-              </button>
-            </div>
-          );
-        })}
-      </main>
+            <button onClick={() => router.push("/shop?category=" + encodeURIComponent(gap.category))} className="btn-secondary" style={{ width: '100%', fontSize: 13 }}>
+              🛒 Shop Suggestions for {gap.category.replace(/-/g, " ")}
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

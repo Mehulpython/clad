@@ -2,179 +2,136 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import PageHeader from "@/components/ui/PageHeader";
+import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 
 interface OutfitData {
   id: string;
   name: string;
-  itemIds: string[];
-  aiReasoning: string;
-  confidenceScore: number;
-  wasWorn: boolean;
-  userRating: number | null;
-  isFavorite: boolean;
+  items: { name: string; color: string; type: string }[];
+  occasion: string;
+  score: number;
+  favorite: boolean;
   createdAt: string;
 }
 
 export default function OutfitsPage() {
   const router = useRouter();
-  const [outfits, setOutfits] = useState<OutfitData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "favorites" | "worn">("all");
-
-  async function loadOutfits() {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filter === "favorites") params.set("favorites", "true");
-      if (filter === "worn") params.set("worn", "true");
-
-      const res = await fetch("/api/outfits?" + params.toString());
-      const data = await res.json();
-      setOutfits(data.outfits || []);
-    } catch (e) {
-      console.error("Failed to load outfits:", e);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [outfits, setOutfits] = useState<OutfitData[]>([]);
+  const [filter, setFilter] = useState<"all" | "favorites">("all");
 
   useEffect(() => {
-    loadOutfits();
-  }, [filter]);
+    fetch("/api/outfits")
+      .then((r) => r.json())
+      .then((data) => { setOutfits(data.outfits || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
-  async function toggleFavorite(id: string) {
-    // Optimistic update
-    setOutfits((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, isFavorite: !o.isFavorite } : o))
-    );
-    // TODO: API call to toggle favorite
-  }
+  const displayed = filter === "favorites" ? outfits.filter((o) => o.favorite) : outfits;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white px-4 sm:px-6 py-6 sm:py-8">
-      {/* Header */}
-      <header className="border-b border-white/10 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg sm:text-xl font-bold">
-            ⚡ <span className="text-[#e879f9]">Clad</span> — My Outfits
-          </h1>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push("/generate")}
-              className="btn-primary px-4 py-2 rounded-lg text-sm font-medium"
-            >
-              ✨ Generate New
-            </button>
-            <button
-              onClick={() => router.push("/wardrobe")}
-              className="text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              ← Wardrobe
-            </button>
-          </div>
-        </div>
-      </header>
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px' }}>
+      <PageHeader
+        title="My Outfits"
+        description="Saved outfit combinations curated by AI and you."
+        badge="Saved"
+        action={
+          <button onClick={() => router.push("/generate")} className="btn-primary" style={{ fontSize: 13 }}>
+            ✨ Generate New Outfit
+          </button>
+        }
+      />
 
-      <main className="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        {/* Filter Tabs */}
-        <div className="flex gap-2">
-          {[{ key: "all", label: "All" }, { key: "favorites", label: "❤️ Favorites" }, { key: "worn", label: "✅ Worn" }].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key as typeof filter)}
-              className={
-                "px-4 py-2 rounded-lg text-sm font-medium transition-all " +
-                (filter === tab.key ? "bg-[#e879f9] text-black" : "bg-white/5 text-gray-400 hover:bg-white/10")
-              }
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Loading */}
-        {loading && (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="glass-card rounded-xl p-6 animate-pulse">
-                <div className="h-5 bg-white/10 rounded w-1/3 mb-3" />
-                <div className="h-3 bg-white/10 rounded w-2/3 mb-2" />
-                <div className="h-3 bg-white/10 rounded w-1/2" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Outfit Cards */}
-        {!loading && outfits.length === 0 && (
-          <div className="glass-card rounded-xl p-12 text-center">
-            <p className="text-4xl mb-4">👗</p>
-            <p className="text-xl font-semibold mb-2">No Outfits Yet</p>
-            <p className="text-gray-400 mb-4">Generate your first AI-powered outfit combination!</p>
-            <button
-              onClick={() => router.push("/generate")}
-              className="btn-primary px-6 py-3 rounded-xl font-semibold"
-            >
-              ✨ Generate Outfits
-            </button>
-          </div>
-        )}
-
-        {!loading && outfits.map((outfit) => (
-          <div
-            key={outfit.id}
-            className="glass-card rounded-xl p-6 space-y-3 hover:border-[#e879f9]/20 transition-all"
+      {/* Filter Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        {(["all", "favorites"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            style={{
+              padding: '8px 20px',
+              borderRadius: 'var(--radius-full)',
+              fontSize: 13,
+              fontWeight: 600,
+              fontFamily: 'var(--font-body)',
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+              border: '1px solid',
+              ...(f === filter
+                ? { background: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' }
+                : { background: 'var(--color-muted)', color: 'var(--color-muted-foreground)', borderColor: 'var(--color-border)' }),
+            }}
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0 mr-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-semibold text-lg">{outfit.name}</h3>
-                  {outfit.wasWorn && (
-                    <span className="text-[10px] px-2 py-0.5 bg-green-500/20 text-green-300 rounded-full font-medium">
-                      Worn
-                    </span>
-                  )}
+            {f === "all" ? "All" : "❤️ Favorites"}
+          </button>
+        ))}
+        <span style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', alignSelf: 'center' }}>
+          {displayed.length} outfit{displayed.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {loading && <LoadingSkeleton type="card" rows={3} />}
+
+      {!loading && displayed.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '64px 24px' }}>
+          <p style={{ fontSize: 40, marginBottom: 12 }}>👗</p>
+          <h3 style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 8 }}>No outfits yet</h3>
+          <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', marginBottom: 24 }}>Generate your first outfit to see it here.</p>
+          <button onClick={() => router.push("/generate")} className="btn-primary">✨ Generate Outfit</button>
+        </div>
+      )}
+
+      {!loading && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          {displayed.map((outfit) => (
+            <div key={outfit.id} className="card" style={{ padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <div>
+                  <h4 style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-display)' }}>{outfit.name}</h4>
+                  <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', marginTop: 2 }}>{outfit.occasion}</p>
                 </div>
-                <p className="text-sm text-gray-400 leading-relaxed">{outfit.aiReasoning}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {outfit.favorite && <span style={{ fontSize: 16 }}>❤️</span>}
+                  <span className="badge badge-primary">{outfit.score}/100</span>
+                </div>
               </div>
 
-              <div className="shrink-0 flex flex-col items-end gap-2">
-                <span className="text-xs px-2.5 py-1 bg-[#e879f9]/10 text-[#e879f9] rounded-full font-medium">
-                  {Math.round(outfit.confidenceScore * 100)}% match
-                </span>
-                <button
-                  onClick={() => toggleFavorite(outfit.id)}
-                  className="text-lg transition-transform hover:scale-110"
-                >
-                  {outfit.isFavorite ? "❤️" : "🤍"}
-                </button>
-              </div>
-            </div>
-
-            {/* Rating */}
-            {outfit.userRating && (
-              <div className="flex items-center gap-1 pt-2 border-t border-white/5">
-                <span className="text-xs text-gray-500">Your rating:</span>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <span key={i} className={i < outfit.userRating! ? "text-yellow-400" : "text-gray-600"}>
-                    ★
-                  </span>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(outfit.items.length, 4)}, 1fr)`, gap: 8 }}>
+                {outfit.items.map((item, i) => (
+                  <div key={i} style={{
+                    aspectRatio: '1',
+                    borderRadius: 'var(--radius-md)',
+                    background: item.color,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid var(--color-border)',
+                    gap: 4,
+                  }}>
+                    <span style={{ fontSize: 16 }}>{typeEmoji(item.type)}</span>
+                    <span style={{ fontSize: 9, fontWeight: 600, textAlign: 'center', padding: '0 4px', fontFamily: 'var(--font-body)', color: isLight(item.color) ? 'var(--color-foreground)' : 'rgba(255,255,255,0.85)' }}>
+                      {item.name}
+                    </span>
+                  </div>
                 ))}
               </div>
-            )}
-
-            {/* Meta */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs text-gray-500">
-              <span>{outfit.itemIds.length} items</span>
-              <span>{new Date(outfit.createdAt).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}</span>
             </div>
-          </div>
-        ))}
-      </main>
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+function typeEmoji(type: string): string {
+  const map: Record<string, string> = { shirt: "👔", pants: "👖", jacket: "🧥", shoes: "👞", dress: "👗", skirt: "🩳", accessory: "🎀", hat: "🎩" };
+  return map[type] || "👕";
+}
+
+function isLight(hex: string): boolean {
+  const c = hex.replace('#', '');
+  if (c.length !== 6) return true;
+  return (parseInt(c.substring(0,2),16)*299 + parseInt(c.substring(2,4),16)*587 + parseInt(c.substring(4,6),16)*114) / 1000 > 150;
 }

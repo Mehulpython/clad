@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Sparkles, RefreshCw, ThermometerSun, Calendar, Palette } from "lucide-react";
+import PageHeader from "@/components/ui/PageHeader";
 
 interface GeneratedOutfit {
   id?: string;
@@ -36,21 +35,14 @@ const MOODS = [
 ];
 
 export default function GeneratePage() {
-  const router = useRouter();
   const [generating, setGenerating] = useState(false);
   const [outfits, setOutfits] = useState<GeneratedOutfit[]>([]);
   const [selectedOccasion, setSelectedOccasion] = useState("casual");
   const [selectedMood, setSelectedMood] = useState("comfortable");
   const [weather, setWeather] = useState<{ tempF: number; condition: string } | null>(null);
 
-  // Fetch weather on mount
   useEffect(() => {
-    fetch("/api/weather")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.weather) setWeather(data.weather);
-      })
-      .catch(() => {});
+    fetch("/api/weather").then((r) => r.json()).then((d) => { if (d.weather) setWeather(d.weather); }).catch(() => {});
   }, []);
 
   async function handleGenerate() {
@@ -59,10 +51,7 @@ export default function GeneratePage() {
       const res = await fetch("/api/outfits/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          occasion: selectedOccasion,
-          mood: selectedMood,
-        }),
+        body: JSON.stringify({ occasion: selectedOccasion, mood: selectedMood }),
       });
       const data = await res.json();
       setOutfits(data.outfits || []);
@@ -73,166 +62,121 @@ export default function GeneratePage() {
     }
   }
 
+  function pill(isActive: boolean) {
+    return {
+      padding: '8px 16px',
+      borderRadius: 'var(--radius-full)',
+      fontSize: 12,
+      fontWeight: 600,
+      fontFamily: 'var(--font-body)',
+      cursor: 'pointer',
+      transition: 'all 150ms ease',
+      border: '1px solid',
+      ...(isActive
+        ? { background: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' }
+        : { background: 'var(--color-muted)', color: 'var(--color-muted-foreground)', borderColor: 'var(--color-border)' }),
+    };
+  }
+
   return (
-    <main className="min-h-screen px-3 sm:px-4 py-6 sm:py-8">
-      <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">✨ Outfit Generator</h1>
-          <p className="text-sm sm:text-base text-gray-400">
-            AI-powered outfit combinations from your wardrobe
+    <div style={{ maxWidth: 700, margin: '0 auto', padding: '40px 24px' }}>
+      <PageHeader
+        title="Outfit Generator"
+        description="AI-powered outfit combinations from your wardrobe."
+        badge="AI"
+      />
+
+      {/* Weather */}
+      {weather && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24, padding: '12px 20px', borderRadius: 'var(--radius-lg)', background: 'var(--color-muted)', border: '1px solid var(--color-border)' }}>
+          <span style={{ fontSize: 18 }}>🌤️</span>
+          <span style={{ fontSize: 14, fontFamily: 'var(--font-body)' }}><strong>{weather.tempF}°F</strong> · <span style={{ color: 'var(--color-muted-foreground)' }}>{weather.condition}</span></span>
+        </div>
+      )}
+
+      {/* Occasion */}
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, display: 'block' }}>Occasion</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {OCCASIONS.map((o) => (
+            <button key={o.value} onClick={() => setSelectedOccasion(o.value)} style={pill(selectedOccasion === o.value)}>
+              {o.emoji} {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Mood */}
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, display: 'block' }}>Mood</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {MOODS.map((m) => (
+            <button key={m.value} onClick={() => setSelectedMood(m.value)} style={pill(selectedMood === m.value)}>
+              {m.emoji} {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Generate */}
+      <button
+        onClick={handleGenerate}
+        disabled={generating}
+        className="btn-primary"
+        style={{ width: '100%', fontSize: 15, padding: '14px' }}
+      >
+        {generating ? "⏳ Generating..." : "✨ Generate My Outfits"}
+      </button>
+
+      {/* Loading */}
+      {generating && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24 }}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{ height: 120, borderRadius: 'var(--radius-lg)', background: 'linear-gradient(110deg, var(--color-muted) 30%, var(--color-border) 50%, var(--color-muted) 70%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s ease-in-out infinite' }} />
+          ))}
+        </div>
+      )}
+
+      {/* Results */}
+      {!generating && outfits.length > 0 && (
+        <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', textAlign: 'center' }}>
+            Generated {outfits.length} outfit{outfits.length !== 1 ? "s" : ""} for you
+          </p>
+          {outfits.map((outfit, idx) => (
+            <div key={idx} className="card" style={{ padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                <div>
+                  <h4 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)' }}>{outfit.name}</h4>
+                  <p style={{ fontSize: 12, color: 'var(--color-primary)', fontFamily: 'var(--font-body)', marginTop: 2 }}>{outfit.colorTheory}</p>
+                </div>
+                <span className="badge badge-primary">{Math.round(outfit.confidence * 100)}%</span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: 8, marginBottom: 14 }}>
+                {outfit.itemIds.map((_, i) => (
+                  <div key={i} style={{ aspectRatio: '1', borderRadius: 'var(--radius-md)', background: 'var(--color-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, border: '1px solid var(--color-border)' }}>
+                    👔
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', lineHeight: 1.7 }}>{outfit.reasoning}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty */}
+      {!generating && outfits.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '64px 24px', marginTop: 16 }}>
+          <p style={{ fontSize: 40, marginBottom: 12 }}>✨</p>
+          <h3 style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 8 }}>Ready to generate</h3>
+          <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+            Pick an occasion and mood, then tap generate.
           </p>
         </div>
-
-        {/* Weather Badge */}
-        {weather && (
-          <div className="glass-card rounded-xl p-3 sm:p-4 flex items-center justify-center gap-3 mb-6">
-            <ThermometerSun className="w-5 h-5 text-yellow-400" />
-            <span className="text-sm">
-              <span className="font-semibold">{weather.tempF}°F</span>
-              {" · "}
-              <span className="text-gray-400">{weather.condition}</span>
-            </span>
-          </div>
-        )}
-
-        {/* Controls */}
-        <div className="space-y-4 mb-6 sm:mb-8">
-          {/* Occasion Selector */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              <Calendar className="w-3 h-3 inline mr-1" />Occasion
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {OCCASIONS.map((o) => (
-                <button
-                  key={o.value}
-                  onClick={() => setSelectedOccasion(o.value)}
-                  className={
-                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all " +
-                    (selectedOccasion === o.value
-                      ? "bg-[#e879f9] text-black"
-                      : "bg-white/5 text-gray-400 hover:bg-white/10")
-                  }
-                >
-                  {o.emoji} {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Mood Selector */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              <Palette className="w-3 h-3 inline mr-1" />Mood
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {MOODS.map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => setSelectedMood(m.value)}
-                  className={
-                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all " +
-                    (selectedMood === m.value
-                      ? "bg-purple-500/20 border border-purple-500/30 text-purple-300"
-                      : "bg-white/5 text-gray-400 hover:bg-white/10")
-                  }
-                >
-                  {m.emoji} {m.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Generate Button */}
-          <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="w-full btn-primary py-3.5 rounded-xl font-semibold text-base disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {generating ? (
-              <>
-                <RefreshCw className="w-5 h-5 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5" />
-                Generate My Outfits
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Loading Skeleton */}
-        {generating && (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="glass-card rounded-xl p-5 sm:p-6 animate-pulse">
-                <div className="h-5 bg-white/10 rounded w-1/3 mb-3" />
-                <div className="h-3 bg-white/10 rounded w-2/3 mb-4" />
-                <div className="grid grid-cols-4 gap-2">
-                  {[1, 2, 3, 4].map((j) => (
-                    <div key={j} className="aspect-square bg-white/10 rounded-lg" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Results */}
-        {!generating && outfits.length > 0 && (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-400 text-center">
-              Generated {outfits.length} outfit{outfits.length !== 1 ? "s" : ""} for you
-            </p>
-            {outfits.map((outfit, idx) => (
-              <div
-                key={idx}
-                className="glass-card rounded-xl p-4 sm:p-6 hover:border-[#e879f9]/20 transition-all"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-semibold text-base sm:text-lg">{outfit.name}</h3>
-                    <p className="text-xs text-[#e879f9] mt-0.5">{outfit.colorTheory}</p>
-                  </div>
-                  <span className="text-xs px-2.5 py-1 bg-[#e879f9]/10 text-[#e879f9] rounded-full font-medium whitespace-nowrap">
-                    {Math.round(outfit.confidence * 100)}%
-                  </span>
-                </div>
-
-                {/* Items Grid */}
-                <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5 sm:gap-2 mb-3">
-                  {outfit.itemIds.map((_, i) => (
-                    <div
-                      key={i}
-                      className="aspect-square rounded-lg bg-gradient-to-br from-white/[0.08] to-white/[0.02] flex items-center justify-center text-lg"
-                    >
-                      👔
-                    </div>
-                  ))}
-                </div>
-
-                {/* Reasoning */}
-                <p className="text-xs sm:text-sm text-gray-400 leading-relaxed">{outfit.reasoning}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!generating && outfits.length === 0 && (
-          <div className="glass-card rounded-xl p-10 sm:p-12 text-center">
-            <Sparkles className="w-12 h-12 mx-auto mb-4 text-gray-600" />
-            <p className="text-lg font-semibold mb-2">Ready to generate</p>
-            <p className="text-sm text-gray-400">
-              Pick an occasion and mood, then tap generate to get AI-powered outfit suggestions.
-            </p>
-          </div>
-        )}
-      </div>
-    </main>
+      )}
+    </div>
   );
 }

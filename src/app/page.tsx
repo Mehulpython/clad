@@ -14,147 +14,257 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
-      {/* Hero */}
-      <section className="relative overflow-hidden px-6 pt-24 pb-16">
-        {/* Background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-pink-500/10 via-purple-500/5 to-transparent rounded-full blur-3xl" />
+    <main style={{ minHeight: '100vh' }}>
+      {/* ─── Hero ──────────────────────────────────────────── */}
+      <section style={{ position: 'relative', overflow: 'hidden', padding: '120px 24px 80px' }}>
+        {/* Background decorations */}
+        <div style={{
+          position: 'absolute', top: -100, right: -200,
+          width: 600, height: 600, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(190,24,93,0.08) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', bottom: -100, left: -200,
+          width: 500, height: 500, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(217,119,6,0.06) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
 
-        <div className="relative max-w-4xl mx-auto text-center">
+        <div style={{ position: 'relative', maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 mb-8 animate-in">
-            <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-sm text-gray-400">Powered by GPT-4o Vision</span>
+          <div className="animate-in" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '6px 16px', borderRadius: 'var(--radius-full)',
+            background: 'rgba(190,24,93,0.06)', border: '1px solid var(--color-border)',
+            marginBottom: 32,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--color-success)' }} />
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+              Powered by GPT-4o Vision
+            </span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] sm:leading-[0.95] mb-6 animate-in px-2" style={{ animationDelay: "0.1s" }}>
+          {/* Headline */}
+          <h1 className="animate-in delay-100" style={{
+            fontSize: 'clamp(2.5rem, 6vw, 5rem)',
+            fontWeight: 700,
+            letterSpacing: '-0.03em',
+            lineHeight: 1.05,
+            marginBottom: 24,
+            fontFamily: 'var(--font-display)',
+            color: 'var(--color-foreground)',
+          }}>
             Your closet,{" "}
-            <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-              but smart
-            </span>
+            <span className="text-gradient">but smart</span>
           </h1>
 
-          <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed animate-in px-2" style={{ animationDelay: "0.2s" }}>
+          {/* Subheadline */}
+          <p className="animate-in delay-200" style={{
+            fontSize: 'clamp(1rem, 2vw, 1.25rem)',
+            color: 'var(--color-muted-foreground)',
+            maxWidth: 560,
+            margin: '0 auto 40px',
+            lineHeight: 1.7,
+            fontFamily: 'var(--font-body)',
+          }}>
             Photograph every piece of clothing you own. Our AI categorizes it, learns
             your style, and generates perfect outfit combinations — every single day.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in" style={{ animationDelay: "0.3s" }}>
-            <a href="/upload" className="btn-primary text-lg px-8 py-4">
+          {/* CTA Buttons */}
+          <div className="animate-in delay-300" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <a href="/upload" className="btn-primary" style={{ fontSize: 17, padding: '16px 36px' }}>
               Start Free →
             </a>
-            <a href="#how-it-works" className="btn-secondary text-lg px-8 py-4">
+            <a href="#how-it-works" className="btn-secondary" style={{ fontSize: 17, padding: '15px 32px' }}>
               How it works
             </a>
           </div>
 
           {/* Social proof */}
-          <p className="mt-8 text-sm text-gray-600 animate-in" style={{ animationDelay: "0.4s" }}>
+          <p className="animate-in delay-400" style={{
+            marginTop: 32, fontSize: 13, color: 'var(--color-muted-foreground)',
+            fontFamily: 'var(--font-body)',
+          }}>
             No credit card needed · 25 items free · Set up in 2 minutes
           </p>
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="how-it-works" className="px-6 py-20">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
-            Three steps to your best-dressed life
-          </h2>
+      {/* ─── How It Works ──────────────────────────────────── */}
+      <section id="how-it-works" className="section" style={{ background: 'var(--color-surface)' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <span className="badge badge-primary" style={{ marginBottom: 16, display: 'inline-flex' }}>
+              How it works
+            </span>
+            <h2 style={{
+              fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
+              fontFamily: 'var(--font-display)',
+              color: 'var(--color-foreground)',
+            }}>
+              Three steps to your{" "}
+              <span className="text-gradient">best-dressed life</span>
+            </h2>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
             {[
               {
                 step: "01",
                 title: "Upload your wardrobe",
-                desc: "Point your camera at each piece of clothing, or import from your gallery. Our AI identifies everything — color, pattern, material, occasion.",
+                desc: "Point your camera at each piece of clothing. Our AI identifies everything — color, pattern, material, occasion.",
                 icon: "📸",
+                color: 'var(--color-primary)',
               },
               {
                 step: "02",
                 title: "Get outfit suggestions",
-                desc: "Every morning (or whenever you want), tap one button. Get 3-5 styled outfits based on weather, occasion, mood, and what you actually own.",
+                desc: "Every morning, tap one button. Get 3-5 styled outfits based on weather, occasion, mood, and what you own.",
                 icon: "✨",
+                color: 'var(--color-secondary)',
               },
               {
                 step: "03",
                 title: "Look great, feel confident",
-                desc: "Never stand in front of your closet wondering what to wear again. Know exactly what combinations work. Build your personal style over time.",
+                desc: "Never stand in front of your closet wondering what to wear. Know exactly what combinations work.",
                 icon: "🔥",
+                color: 'var(--color-accent)',
               },
-            ].map((step) => (
-              <div key={step.step} className="glass-card p-6 sm:p-8 relative group hover:border-purple-500/30 transition-all duration-300">
-                <span className="text-5xl mb-4 block">{step.icon}</span>
-                <span className="text-xs font-mono text-purple-400 tracking-wider uppercase mb-2 block">
+            ].map((step, i) => (
+              <div
+                key={step.step}
+                className={`card animate-in delay-${(i + 1) * 100}`}
+                style={{ padding: '32px 28px', textAlign: 'center' }}
+              >
+                <div style={{
+                  width: 56, height: 56, borderRadius: 'var(--radius-lg)',
+                  background: `linear-gradient(135deg, ${step.color}15, ${step.color}08)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 28, margin: '0 auto 20px',
+                  border: `1px solid ${step.color}20`,
+                }}>
+                  {step.icon}
+                </div>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                  textTransform: 'uppercase', color: step.color,
+                  fontFamily: 'var(--font-body)',
+                  display: 'block', marginBottom: 8,
+                }}>
                   Step {step.step}
                 </span>
-                <h3 className="text-xl font-semibold mb-3 group-hover:text-purple-300 transition-colors">
+                <h3 style={{
+                  fontSize: 20, fontWeight: 700, color: 'var(--color-foreground)',
+                  fontFamily: 'var(--font-display)', marginBottom: 12,
+                }}>
                   {step.title}
                 </h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{step.desc}</p>
+                <p style={{
+                  fontSize: 14, color: 'var(--color-muted-foreground)',
+                  lineHeight: 1.7, fontFamily: 'var(--font-body)',
+                }}>
+                  {step.desc}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Feature highlights */}
-      <section className="px-6 py-20 bg-gradient-to-b from-transparent via-purple-900/5 to-transparent">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+      {/* ─── Feature Highlights ─────────────────────────────── */}
+      <section className="section">
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 48, alignItems: 'center' }}>
+            {/* Left: Features */}
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold mb-6">
+              <span className="badge badge-accent" style={{ marginBottom: 16, display: 'inline-flex' }}>
+                AI-Powered
+              </span>
+              <h2 style={{
+                fontSize: 'clamp(1.5rem, 3vw, 2.25rem)',
+                fontFamily: 'var(--font-display)',
+                color: 'var(--color-foreground)',
+                marginBottom: 32,
+              }}>
                 AI that actually{" "}
-                <span className="text-purple-400">understands fashion</span>
+                <span className="text-gradient">understands fashion</span>
               </h2>
-              <ul className="space-y-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {[
-                  "GPT-4o Vision identifies any clothing item from a photo — western wear, ethnic pieces, accessories",
-                  "Color theory engine ensures every outfit is harmonious (complementary, analogous, monochromatic)",
-                  "Weather-aware suggestions — no wool suits in summer, always rain-ready",
-                  "'Should I buy this?' scanner checks new items against your entire wardrobe before you spend",
-                  "Weekly planner auto-generates 7 days of outfits every Sunday evening",
-                  "Gap analysis tells you exactly what's missing and what would create the most new looks",
+                  "GPT-4o Vision identifies any clothing item — western wear, ethnic pieces, accessories",
+                  "Color theory engine ensures every outfit is harmonious",
+                  "Weather-aware suggestions — no wool suits in summer",
+                  "'Should I buy this?' scanner checks against your entire wardrobe",
+                  "Weekly planner auto-generates 7 days of outfits",
+                  "Gap analysis tells you exactly what's missing",
                 ].map((feature) => (
-                  <li key={feature} className="flex items-start gap-3">
-                    <span className="text-green-400 mt-0.5">✓</span>
-                    <span className="text-gray-300 text-sm">{feature}</span>
-                  </li>
+                  <div key={feature} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                      background: 'rgba(5,150,105,0.1)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', marginTop: 2,
+                    }}>
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 4L3.5 6.5L9 1" stroke="#059669" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <span style={{ fontSize: 14, color: 'var(--color-muted-foreground)', lineHeight: 1.6, fontFamily: 'var(--font-body)' }}>
+                      {feature}
+                    </span>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
 
-            {/* Mockup card */}
-            <div className="glass-card p-6 glow-pulse">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-sm text-gray-400">Today&apos;s Outfit</span>
-                <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-300">
+            {/* Right: Outfit Preview Card */}
+            <div className="card-static animate-float" style={{ padding: 28 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>
+                  Today&apos;s Outfit
+                </span>
+                <span className="badge badge-primary">
                   48°F · Rainy
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                 {[
-                  { label: "Navy Blazer", color: "#1e293b", emoji: "🧥" },
-                  { label: "White Oxford", color: "#f8fafc", emoji: "👔" },
-                  { label: "Dark Jeans", color: "#334155", emoji: "👖" },
-                  { label: "Brown Loafers", color: "#78350f", emoji: "👞" },
-                  { label: "Navy Belt", color: "#1e293b", emoji: "🎀" },
-                  { label: "Watch", color: "#1f2937", emoji: "⌚" },
+                  { label: "Navy Blazer", color: "#1e293b", icon: "🧥" },
+                  { label: "White Oxford", color: "#f8fafc", icon: "👔" },
+                  { label: "Dark Jeans", color: "#334155", icon: "👖" },
+                  { label: "Brown Loafers", color: "#78350f", icon: "👞" },
+                  { label: "Navy Belt", color: "#1e293b", icon: "🎀" },
+                  { label: "Watch", color: "#1f2937", icon: "⌚" },
                 ].map((item) => (
                   <div
                     key={item.label}
-                    className="aspect-square rounded-xl flex flex-col items-center justify-center gap-1 border border-white/5 hover:border-purple-500/30 transition-colors cursor-default"
-                    style={{ backgroundColor: item.color }}
+                    style={{
+                      aspectRatio: '1', borderRadius: 'var(--radius-md)',
+                      display: 'flex', flexDirection: 'column',
+                      alignItems: 'center', justifyContent: 'center', gap: 4,
+                      background: item.color, border: '1px solid var(--color-border)',
+                      transition: 'all 150ms ease', cursor: 'default',
+                    }}
                   >
-                    <span className="text-lg">{item.emoji}</span>
-                    <span className="text-[10px] text-white/70 text-center leading-tight px-1">
+                    <span style={{ fontSize: 20 }}>{item.icon}</span>
+                    <span style={{
+                      fontSize: 10, color: item.color === '#f8fafc' ? 'var(--color-foreground)' : 'rgba(255,255,255,0.7)',
+                      textAlign: 'center', lineHeight: 1.2, padding: '0 4px', fontFamily: 'var(--font-body)',
+                    }}>
                       {item.label}
                     </span>
                   </div>
                 ))}
               </div>
-              <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/5">
-                <p className="text-xs text-gray-400 italic">
+              <div style={{
+                marginTop: 20, padding: '14px 16px', borderRadius: 'var(--radius-md)',
+                background: 'var(--color-muted)', border: '1px solid var(--color-border)',
+              }}>
+                <p style={{
+                  fontSize: 12, color: 'var(--color-muted-foreground)', fontStyle: 'italic',
+                  lineHeight: 1.6, fontFamily: 'var(--font-body)',
+                }}>
                   &quot;Navy + white creates a sharp, professional look. The brown leather adds warmth.
                   Perfect for rainy-day office wear.&quot;
                 </p>
@@ -164,20 +274,77 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="px-6 py-20 text-center">
-        <h2 className="text-2xl sm:text-3xl font-bold mb-4 px-2">Ready to never ask &quot;what do I wear?&quot; again?</h2>
-        <p className="text-gray-400 mb-8 max-w-lg mx-auto">
-          Join thousands of people who let AI handle their daily style decisions.
-        </p>
-        <a href="/upload" className="btn-primary text-lg px-10 py-4 inline-block">
-          Build Your Free Wardrobe →
-        </a>
+      {/* ─── Stats Bar ─────────────────────────────────────── */}
+      <section style={{ padding: '48px 24px', background: 'var(--color-surface)', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 32, textAlign: 'center' }}>
+          {[
+            { value: "50K+", label: "Items Scanned" },
+            { value: "120K+", label: "Outfits Generated" },
+            { value: "4.9★", label: "User Rating" },
+            { value: "<2min", label: "Setup Time" },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <div style={{
+                fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800,
+                fontFamily: 'var(--font-display)', color: 'var(--color-primary)',
+                marginBottom: 4,
+              }}>
+                {stat.value}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', fontWeight: 500 }}>
+                {stat.label}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/5 px-6 py-8 text-center text-sm text-gray-600">
-        <p>© {new Date().getFullYear()} Clad. Built with ❤️ and GPT-4o.</p>
+      {/* ─── CTA ───────────────────────────────────────────── */}
+      <section className="section" style={{ textAlign: 'center' }}>
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+          <h2 style={{
+            fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)',
+            fontFamily: 'var(--font-display)',
+            color: 'var(--color-foreground)',
+            marginBottom: 16,
+          }}>
+            Ready to never ask{" "}
+            <span className="text-gradient">&quot;what do I wear?&quot;</span>{" "}
+            again?
+          </h2>
+          <p style={{
+            fontSize: 16, color: 'var(--color-muted-foreground)',
+            marginBottom: 36, lineHeight: 1.7, fontFamily: 'var(--font-body)',
+          }}>
+            Join thousands of people who let AI handle their daily style decisions.
+          </p>
+          <a href="/upload" className="btn-primary" style={{ fontSize: 17, padding: '16px 40px' }}>
+            Build Your Free Wardrobe →
+          </a>
+        </div>
+      </section>
+
+      {/* ─── Footer ────────────────────────────────────────── */}
+      <footer style={{
+        borderTop: '1px solid var(--color-border)',
+        padding: '32px 24px',
+        textAlign: 'center',
+        fontFamily: 'var(--font-body)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+          <span style={{
+            width: 24, height: 24, borderRadius: 6,
+            background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 12,
+          }}>
+            👗
+          </span>
+          <span style={{ fontWeight: 700, color: 'var(--color-foreground)', fontFamily: 'var(--font-display)' }}>Clad</span>
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)' }}>
+          © {new Date().getFullYear()} Clad. Your wardrobe, powered by AI.
+        </p>
       </footer>
     </main>
   );
