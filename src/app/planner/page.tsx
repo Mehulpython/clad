@@ -70,11 +70,11 @@ export default function PlannerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-[#0a0a0f] text-white px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
       <header className="border-b border-white/10 px-6 py-4 sticky top-0 bg-[#0a0a0f]/80 backdrop-blur-md z-10">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold">
+          <h1 className="text-lg sm:text-xl font-bold">
             ⚡ <span className="text-[#e879f9]">Clad</span> — Weekly Planner
           </h1>
           <div className="flex items-center gap-3">

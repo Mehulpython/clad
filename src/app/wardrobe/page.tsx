@@ -102,12 +102,12 @@ export default function WardrobePage() {
   };
 
   return (
-    <main className="min-h-screen px-4 py-8">
+    <main className="min-h-screen px-3 sm:px-4 py-6 sm:py-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-3xl font-bold">My Wardrobe</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">My Wardrobe</h1>
             <p className="text-gray-400 text-sm mt-1">
               {items.length} item{items.length !== 1 ? "s" : ""}
               {items.filter((i) => i.isInLaundry).length > 0
@@ -126,7 +126,7 @@ export default function WardrobePage() {
         {/* Filters bar */}
         <div className="flex flex-wrap items-center gap-3 mb-8">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <div className="relative flex-1 min-w-0 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
@@ -360,11 +360,11 @@ export default function WardrobePage() {
         {/* Detail modal */}
         {selectedItem && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-sm"
             onClick={() => setSelectedItem(null)}
           >
             <div
-              className="glass-card max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="glass-card w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}

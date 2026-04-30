@@ -27,14 +27,14 @@ export default function Home() {
             <span className="text-sm text-gray-400">Powered by GPT-4o Vision</span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[0.95] mb-6 animate-in" style={{ animationDelay: "0.1s" }}>
+          <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.05] sm:leading-[0.95] mb-6 animate-in px-2" style={{ animationDelay: "0.1s" }}>
             Your closet,{" "}
             <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
               but smart
             </span>
           </h1>
 
-          <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-in" style={{ animationDelay: "0.2s" }}>
+          <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed animate-in px-2" style={{ animationDelay: "0.2s" }}>
             Photograph every piece of clothing you own. Our AI categorizes it, learns
             your style, and generates perfect outfit combinations — every single day.
           </p>
@@ -62,7 +62,7 @@ export default function Home() {
             Three steps to your best-dressed life
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {[
               {
                 step: "01",
@@ -83,7 +83,7 @@ export default function Home() {
                 icon: "🔥",
               },
             ].map((step) => (
-              <div key={step.step} className="glass-card p-8 relative group hover:border-purple-500/30 transition-all duration-300">
+              <div key={step.step} className="glass-card p-6 sm:p-8 relative group hover:border-purple-500/30 transition-all duration-300">
                 <span className="text-5xl mb-4 block">{step.icon}</span>
                 <span className="text-xs font-mono text-purple-400 tracking-wider uppercase mb-2 block">
                   Step {step.step}
@@ -101,9 +101,9 @@ export default function Home() {
       {/* Feature highlights */}
       <section className="px-6 py-20 bg-gradient-to-b from-transparent via-purple-900/5 to-transparent">
         <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <div>
-              <h2 className="text-3xl font-bold mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold mb-6">
                 AI that actually{" "}
                 <span className="text-purple-400">understands fashion</span>
               </h2>
@@ -166,7 +166,7 @@ export default function Home() {
 
       {/* CTA */}
       <section className="px-6 py-20 text-center">
-        <h2 className="text-3xl font-bold mb-4">Ready to never ask &quot;what do I wear?&quot; again?</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold mb-4 px-2">Ready to never ask &quot;what do I wear?&quot; again?</h2>
         <p className="text-gray-400 mb-8 max-w-lg mx-auto">
           Join thousands of people who let AI handle their daily style decisions.
         </p>

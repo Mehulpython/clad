@@ -122,12 +122,12 @@ export default function UploadPage() {
   const errorCount = items.filter((i) => i.status === "error").length;
 
   return (
-    <main className="min-h-screen px-4 py-8">
+    <main className="min-h-screen px-3 sm:px-4 py-6 sm:py-8">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold mb-2">Build Your Wardrobe</h1>
-          <p className="text-gray-400">
+        <div className="text-center mb-8 sm:mb-10">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Build Your Wardrobe</h1>
+          <p className="text-sm sm:text-base text-gray-400 px-2">
             Upload photos of your clothing. AI will identify and categorize each piece.
           </p>
         </div>
@@ -142,7 +142,7 @@ export default function UploadPage() {
             handleFiles(e.dataTransfer.files);
           }}
           onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 ${
+          className={`border-2 border-dashed rounded-2xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-300 ${
             isDragging
               ? "border-purple-500 bg-purple-500/10 scale-[1.01]"
               : "border-white/10 hover:border-purple-500/30 bg-white/[0.02]"
