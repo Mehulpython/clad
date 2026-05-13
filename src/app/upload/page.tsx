@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
+import { toast } from "sonner";
 
 interface UploadedItem {
   id: string;
@@ -54,6 +55,10 @@ export default function UploadPage() {
     setIsProcessing(true);
     for (const item of items.filter((i) => i.status === "uploading")) await processItem(item);
     setIsProcessing(false);
+    const done = items.filter((i) => i.status === "done").length;
+    const errs = items.filter((i) => i.status === "error").length;
+    if (done > 0 && errs === 0) toast.success("Photos analyzed & added!");
+    else if (errs > 0) toast.error("Upload failed");
   };
 
   if (items.length > prevCountRef.current && items.some((i) => i.status === "uploading")) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 // ─── Types ─────────────────────────────────────────────────
 
@@ -212,13 +213,19 @@ export default function AdminDashboard() {
         }),
       });
       const data = await res.json();
-      setActionResult(data.success ? `✅ ${data.message}` : `❌ ${data.error}`);
+      if (data.success) {
+        toast.success(data.message || "Plan updated");
+      } else {
+        toast.error(data.error || "Failed to update plan");
+      }
+      setActionResult(null);
       setShowPlanModal(false);
       setNewPlan("");
       fetchUsers();
       fetchDashboard();
     } catch (e) {
-      setActionResult(`❌ ${(e as Error).message}`);
+      toast.error((e as Error).message);
+      setActionResult(null);
     }
     setActionLoading(false);
   }
@@ -236,11 +243,15 @@ export default function AdminDashboard() {
         }),
       });
       const data = await res.json();
-      setActionResult(data.success ? `✅ ${data.message}` : `❌ ${data.error}`);
+      if (data.success) {
+        toast.success(data.message || "User data deleted");
+      } else {
+        toast.error(data.error || "Failed to delete user data");
+      }
       fetchUsers();
       fetchDashboard();
     } catch (e) {
-      setActionResult(`❌ ${(e as Error).message}`);
+      toast.error((e as Error).message);
     }
     setActionLoading(false);
   }
@@ -288,18 +299,12 @@ export default function AdminDashboard() {
             </h1>
           </div>
 
-          {/* Action Result Toast */}
-          {actionResult && (
-            <div className="text-xs px-3 py-1.5 rounded-lg bg-white/10 border border-white/10">
-              {actionResult}
-            </div>
-          )}
+          {/* Action results now shown via sonner toasts */}
 
           <button
             onClick={() => {
               fetchDashboard();
-              setActionResult("🔄 Refreshed");
-              setTimeout(() => setActionResult(null), 2000);
+              toast.success("Refreshed");
             }}
             className="text-xs text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg bg-white/5 border border-white/10"
           >

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import PageHeader from "@/components/ui/PageHeader";
+import { toast } from "sonner";
 
 interface GeneratedOutfit {
   id?: string;
@@ -54,9 +55,12 @@ export default function GeneratePage() {
         body: JSON.stringify({ occasion: selectedOccasion, mood: selectedMood }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error("Generation failed");
       setOutfits(data.outfits || []);
+      toast.success("Created outfit ideas!");
     } catch (e) {
       console.error("Generation failed:", e);
+      toast.error("Failed to generate outfits");
     } finally {
       setGenerating(false);
     }

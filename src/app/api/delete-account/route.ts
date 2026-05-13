@@ -94,6 +94,46 @@ export async function POST(req: NextRequest) {
       console.error(`[DeleteAccount] Failed to delete outfits for ${userIdDb}:`, outfitsError.message);
     }
 
+    // ─── Step 3b: Delete weekly plans ──────────────────────
+    const { error: weeklyPlansError } = await supabaseAdmin
+      .from("weekly_plans")
+      .delete()
+      .eq("user_id", userIdDb);
+
+    if (weeklyPlansError) {
+      console.error(`[DeleteAccount] Failed to delete weekly_plans for ${userIdDb}:`, weeklyPlansError.message);
+    }
+
+    // ─── Step 3c: Delete daily plans ───────────────────────
+    const { error: dailyPlansError } = await supabaseAdmin
+      .from("daily_plans")
+      .delete()
+      .eq("user_id", userIdDb);
+
+    if (dailyPlansError) {
+      console.error(`[DeleteAccount] Failed to delete daily_plans for ${userIdDb}:`, dailyPlansError.message);
+    }
+
+    // ─── Step 3d: Delete scan history ──────────────────────
+    const { error: scanHistoryError } = await supabaseAdmin
+      .from("scan_history")
+      .delete()
+      .eq("user_id", userIdDb);
+
+    if (scanHistoryError) {
+      console.error(`[DeleteAccount] Failed to delete scan_history for ${userIdDb}:`, scanHistoryError.message);
+    }
+
+    // ─── Step 3e: Delete color analysis ────────────────────
+    const { error: colorAnalysisError } = await supabaseAdmin
+      .from("color_analysis")
+      .delete()
+      .eq("user_id", userIdDb);
+
+    if (colorAnalysisError) {
+      console.error(`[DeleteAccount] Failed to delete color_analysis for ${userIdDb}:`, colorAnalysisError.message);
+    }
+
     // ─── Step 4: Delete user record ────────────────────────
     const { error: userError } = await supabaseAdmin
       .from("users")

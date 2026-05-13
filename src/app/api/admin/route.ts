@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { escapeLikePattern } from "@/lib/rate-limit";
 
 // ─── Admin check (basic) ──────────────────────────────────
 // Replace with proper role-based access in production
@@ -15,8 +16,16 @@ const ADMIN_CLERK_IDS = new Set<string>(
 );
 
 async function isAdmin(userId: string): Promise<boolean> {
-  // If no admins configured, allow all authenticated users (dev mode)
-  if (ADMIN_CLERK_IDS.size === 0) return true;
+  // If no admins configured, DENY access (never default to open)
+  if (ADMIN_CLERK_IDS.size === 0) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        "[Admin] ADMIN_CLERK_IDS is not set. Admin access denied for all users. " +
+        "Set ADMIN_CLERK_IDS env var with comma-separated Clerk user IDs."
+      );
+    }
+    return false;
+  }
   return ADMIN_CLERK_IDS.has(userId);
 }
 
@@ -198,7 +207,7 @@ async function getUsers(supabase: ReturnType<typeof getSupabaseAdmin>, params: U
     .range((page - 1) * limit, page * limit - 1);
 
   if (search) {
-    query = query.or(`display_name.ilike.%${search}%,clerk_id.ilike.%${search}%`);
+    query = query.or(`display_name.ilike.%${escapeLikePattern(search)}%,clerk_id.ilike.%${escapeLikePattern(search)}%`);
   }
   if (planFilter && ["free", "pro", "studio"].includes(planFilter)) {
     query = query.eq("plan", planFilter);

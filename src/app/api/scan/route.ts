@@ -6,11 +6,26 @@ import { auth } from "@clerk/nextjs/server";
 import { getSupabase } from "@/lib/supabase";
 import { getOpenAIClient, analyzeClothingPhoto } from "@/lib/vision";
 import type { PrePurchaseScan, ScanVerdict, WardrobeItem } from "@/lib/types";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { mapWardrobeRows } from "@/lib/mappers";
+import { ITEM_CATEGORIES, COMPLEMENTARY_CATEGORIES } from "@/lib/categories";
 
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Rate limit: 15 requests per minute per user
+    const rateLimit = checkRateLimit(`${userId}:scan`, 15);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Try again shortly." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimit.retryAfter) },
+        }
+      );
+    }
 
     const body = await req.json();
     const imageUrl = body.imageUrl as string | undefined;
@@ -46,39 +61,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Step 3: Cross-reference against wardrobe
-    const wardrobe: WardrobeItem[] = (rawItems as Array<Record<string, unknown>>).map((row) => ({
-      id: row.id as string,
-      userId: row.user_id as string,
-      itemType: (row.item_type as string) as WardrobeItem["itemType"],
-      category: (row.category as string) as WardrobeItem["category"],
-      subtype: (row.subtype as string) || "",
-      primaryColor: (row.primary_color as string) || "unknown",
-      secondaryColor: row.secondary_color as string | null,
-      pattern: ((row.pattern as string) || "solid") as any,
-      material: (row.material as any) as any || null,
-      occasions: [],
-      seasons: [],
-      formalityLevel: Number(row.formality_level) || 3,
-      tags: [],
-      aiConfidence: Number(row.ai_confidence) || 0.5,
-      brand: row.brand as string | null,
-      size: row.size_text as string | null,
-      purchasedFrom: row.purchased_from as string | null,
-      priceUsd: row.price_usd as number | null,
-      purchaseDate: row.purchase_date as string | null,
-      imageUrl: (row.image_url as string) || "",
-      thumbnailUrl: (row.thumbnail_url as string) || "",
-      aiRawOutput: null,
-      isFavorite: Boolean(row.is_favorite),
-      isArchived: Boolean(row.is_archived),
-      isInLaundry: Boolean(row.is_in_laundry),
-      wearCount: Number(row.wear_count) || 0,
-      lastWornAt: row.last_worn_at as string | null,
-      correctedFields: [],
-      suggestedName: (row.primary_color as string) + " " + (row.item_type as string),
-      createdAt: (row.created_at as string) || "",
-      updatedAt: (row.updated_at as string) || "",
-    }));
+    const wardrobe = mapWardrobeRows(rawItems as Array<Record<string, unknown>>);
 
     // Find matching items
     const matchingItems: string[] = [];
@@ -95,43 +78,8 @@ export async function POST(req: NextRequest) {
         }
       }
       // Category match (complementary items)
-      const complementaryCategories: Record<string, string[]> = {
-        tops: ["bottoms", "outerwear", "footwear"],
-        bottoms: ["tops", "footwear", "belts"],
-        outerwear: ["tops", "dresses", "footwear"],
-        footwear: ["bottoms", "tops", "dresses"],
-        dresses: ["outerwear", "footwear", "accessories"],
-        accessories: ["tops", "dresses", "outerwear"],
-      };
-      // Map itemType to category
-      const itemCategoryMap: Record<string, string> = {
-        "t-shirt": "tops", "polo": "tops", "button-up": "tops", "hoodie": "tops",
-        "sweater": "tops", "cardigan": "tops", "sweatshirt": "tops", "tank-top": "tops",
-        "blouse": "tops", "bodysuit": "tops",
-        "jacket": "outerwear", "blazer": "outerwear", "coat": "outerwear",
-        "denim-jacket": "outerwear", "leather-jacket": "outerwear", "bomber": "outerwear",
-        "puffer": "outerwear", "trench": "outerwear",
-        "jeans": "bottoms", "trousers": "bottoms", "chinos": "bottoms", "shorts": "bottoms",
-        "leggings": "bottoms", "skirt": "bottoms", "mini-skirt": "bottoms", "midi-skirt": "bottoms",
-        "maxi-skirt": "bottoms",
-        "dress": "dresses", "mini-dress": "dresses", "midi-dress": "dresses", "maxi-dress": "dresses",
-        "jumpsuit": "dresses", "romper": "dresses",
-        "sneakers": "footwear", "running-shoes": "footwear", "high-tops": "footwear",
-        "loafers": "footwear", "oxfords": "footwear", "boots": "footwear",
-        "ankle-boots": "footwear", "knee-high-boots": "footwear", "heels": "footwear",
-        "pumps": "footwear", "flats": "footwear", "sandals": "footwear",
-        "flip-flops": "footwear", "slides": "footwear", "crocs": "footwear", "dress-shoes": "footwear",
-        "belt": "accessories", "hat": "accessories", "cap": "accessories",
-        "beanie": "accessories", "scarf": "accessories", "gloves": "accessories",
-        "watch": "accessories", "bracelet": "accessories", "necklace": "accessories",
-        "earrings": "accessories", "ring": "accessories", "sunglasses": "accessories",
-        "eyeglasses": "accessories", "tie": "accessories", "bow-tie": "accessories",
-        "pocket-square": "accessories", "bag": "accessories", "backpack": "accessories",
-        "tote": "accessories", "crossbody": "accessories", "clutch": "accessories",
-        "wallet": "accessories", "umbrella": "accessories",
-      };
-      const analyzedCategory = itemCategoryMap[analyzedItem.itemType] || "tops";
-      const complements = complementaryCategories[analyzedCategory] || [];
+      const analyzedCategory = ITEM_CATEGORIES[analyzedItem.itemType] || "tops";
+      const complements = COMPLEMENTARY_CATEGORIES[analyzedCategory] || [];
       if (complements.includes(item.category)) {
         if (!matchingItems.includes(item.suggestedName || item.itemType)) {
           matchingItems.push(item.suggestedName || item.itemType);

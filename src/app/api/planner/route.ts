@@ -5,7 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getSupabase } from "@/lib/supabase";
 import { generateOutfitCandidates, refineOutfitsWithAI } from "@/lib/outfit-engine";
+import { mapWardrobeRows } from "@/lib/mappers";
 import type { DayPlan, WeekPlan, OutfitContext, Occasion, Mood, WardrobeItem } from "@/lib/types";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -24,6 +26,18 @@ export async function GET() {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    // Rate limit: 5 requests per minute per user
+    const rateLimit = checkRateLimit(`${userId}:planner`, 5);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Try again shortly." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimit.retryAfter) },
+        }
+      );
+    }
+
     const supabase = await getSupabase();
 
     const { data: plans, error } = await supabase
@@ -34,11 +48,11 @@ export async function GET() {
       .limit(1);
 
     if (error || !plans || plans.length === 0) {
-      return NextResponseJson({ plans: [], message: "No week plans found. Generate one!" });
+      return NextResponse.json({ plans: [], message: "No week plans found. Generate one!" });
     }
 
     const latest = plans[0] as Record<string, unknown>;
-    return NextResponseJson({
+    return NextResponse.json({
       plan: {
         weekOf: latest.week_of as string,
         days: (latest.days as DayPlan[]) || [],
@@ -73,45 +87,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to load wardrobe" }, { status: 500 });
     }
 
-    const wardrobe: WardrobeItem[] = (rawItems as Array<Record<string, unknown>>).map((row) => ({
-      id: row.id as string,
-      userId: row.user_id as string,
-      itemType: (row.item_type as string) as WardrobeItem["itemType"],
-      category: (row.category as string) as WardrobeItem["category"],
-      subtype: (row.subtype as string) || "",
-      primaryColor: (row.primary_color as string) || "unknown",
-      secondaryColor: row.secondary_color as string | null,
-      pattern: ((row.pattern as string) || "solid") as any,
-      material: (row.material as any) as any || null,
-      occasions: [],
-      seasons: [],
-      formalityLevel: Number(row.formality_level) || 3,
-      tags: [],
-      aiConfidence: Number(row.ai_confidence) || 0.5,
-      brand: null,
-      size: null,
-      purchasedFrom: null,
-      priceUsd: null,
-      purchaseDate: null,
-      imageUrl: (row.image_url as string) || "",
-      thumbnailUrl: (row.thumbnail_url as string) || "",
-      aiRawOutput: null,
-      isFavorite: Boolean(row.is_favorite),
-      isArchived: Boolean(row.is_archived),
-      isInLaundry: Boolean(row.is_in_laundry),
-      wearCount: Number(row.wear_count) || 0,
-      lastWornAt: null,
-      correctedFields: [],
-      suggestedName: (row.primary_color as string) + " " + (row.item_type as string),
-      createdAt: (row.created_at as string) || "",
-      updatedAt: (row.updated_at as string) || "",
-    }));
+    const wardrobe = mapWardrobeRows(rawItems as Array<Record<string, unknown>>);
 
-    // Get weather for the week (use current as proxy)
+    // ── Resolve user location ──────────────────────────────
+    let lat = 40.7128;   // fallback: NYC
+    let lon = -74.006;
+    let locationSource: "user" | "default" = "default";
+    let resolvedLocation = "New York, NY";
+
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("location_zip")
+        .eq("id", userId)
+        .single();
+
+      const zip = (profile as Record<string, unknown> | null)?.location_zip as string | undefined;
+      if (zip?.trim()) {
+        const geoRes = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(zip.trim())}&count=1&format=json`
+        );
+        if (geoRes.ok) {
+          const geoData = await geoRes.json() as { results?: Array<{ latitude: number; longitude: number; name: string }> };
+          if (geoData.results?.[0]) {
+            lat = geoData.results[0].latitude;
+            lon = geoData.results[0].longitude;
+            resolvedLocation = geoData.results[0].name;
+            locationSource = "user";
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[planner] Location resolution failed, using default:", e);
+    }
+
+      // Get weather for the week (use current as proxy)
     let weatherContext;
+    let locationInfo: { location: string; locationSource: string } | undefined;
     try {
       const weatherRes = await fetch(
-        "https://api.open-meteo.com/v1/forecast?latitude=40.7128&longitude=-74.006&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code"
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`
       );
       if (weatherRes.ok) {
         const wdata = await weatherRes.json() as Record<string, unknown>;
@@ -122,6 +137,7 @@ export async function POST(req: NextRequest) {
           humidity: Number(current.relative_humidity_2m) || 50,
           windMph: Math.round((Number(current.wind_speed_10m) || 0) * 0.621371),
         };
+        locationInfo = { location: resolvedLocation, locationSource };
       }
     } catch (e) {
       // Weather is optional
@@ -208,6 +224,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       plan: weekPlan,
+      locationSource,
       message: "Week plan generated successfully!",
     });
   } catch (error) {

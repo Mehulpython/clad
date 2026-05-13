@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
+import { toast } from "sonner";
 
 interface PrePurchaseScan {
   verdict: "great-buy" | "decent" | "skip" | "duplicate";
@@ -64,8 +65,10 @@ export default function ScanPage() {
       const data = await res.json();
       setResult(data.scan);
       setAnalyzedItem(data.analyzedItem);
+      toast.success("Analysis complete!");
     } catch (e) {
       console.error("Scan failed:", e);
+      toast.error("Scan failed — please try again");
     } finally {
       setScanning(false);
     }

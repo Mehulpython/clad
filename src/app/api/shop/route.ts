@@ -1,45 +1,174 @@
 // ─── GET /api/shop ─────────────────────────────────────────
-// Shop suggestions with affiliate links.
+// AI-curated shopping suggestions — not a real store (yet).
+// Products are suggestions based on common wardrobe gaps.
+// Links go to Google Shopping so users can compare real prices.
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import type { ShopSuggestion } from "@/lib/shop-types";
 
-// ── Mock Shop Data (replace with real affiliate API later) ──
+type ProductCategory = "tops" | "bottoms" | "outerwear" | "footwear" | "accessories";
 
-const SHOP_CATALOG: ShopSuggestion[] = [
-  // Tops
-  { id: "s1", userId: "", platform: "Amazon", productName: "Essential Crew Neck T-Shirt (3-Pack)", productUrl: "https://amazon.com/dp/B08J9Y7XRS", productImageUrl: "", priceUsd: 29, affiliateUrl: "https://amzn.to/essential-tee", reason: "Wardrobe staple — pairs with everything" },
-  { id: "s2", userId: "", platform: "H&M", productName: "Slim Fit Oxford Shirt", productUrl: "https://hm.com/product/oxford", productImageUrl: "", priceUsd: 35, affiliateUrl: null, reason: "Perfect for work and smart casual" },
-  { id: "s3", userId: "", platform: "Zara", productName: "Oversized Knit Sweater", productUrl: "https://zara.com/sweater", productImageUrl: "", priceUsd: 60, affiliateUrl: null, reason: "Great layering piece for fall/winter" },
-  { id: "s4", userId: "", platform: "Uniqlo", productName: "U-Airism T-Shirt", productUrl: "https://uniqlo.com/airism", productImageUrl: "", priceUsd: 15, affiliateUrl: null, reason: "Best basic tee for summer" },
+// ── AI-Curated Suggestion Catalog ──
 
-  // Bottoms
-  { id: "s5", userId: "", platform: "Levi's (Amazon)", productName: "501 Original Fit Jeans", productUrl: "https://amazon.com/dp/B0012VQ6CM", productImageUrl: "", priceUsd: 70, affiliateUrl: "https://amzn.to/levis501", reason: "Classic fit every wardrobe needs" },
-  { id: "s6", userId: "", platform: "Target", productName: "Goodfellow Chinos Slim Fit", productUrl: "https://target.com/chinos", productImageUrl: "", priceUsd: 45, affiliateUrl: null, reason: "Best value chinos on the market" },
-  { id: "s7", userId: "", platform: "ASOS", productName: "Tailored Black Trousers", productUrl: "https://asos.com/trousers", productImageUrl: "", priceUsd: 52, affiliateUrl: null, reason: "Essential for formal occasions" },
-  { id: "s8", userId: "", platform: "H&M", productName: "Linen Blend Shorts", productUrl: "https://hm.com/shorts", productImageUrl: "", priceUsd: 25, affiliateUrl: null, reason: "Summer essential — breathable fabric" },
+const CATALOG: ShopSuggestion[] = [
+  // ── Tops ──────────────────────────────────────────────
+  {
+    id: "s1", platform: "Suggestion", productName: "Essential Crew Neck T-Shirt (3-Pack)",
+    productUrl: googleShoppingUrl("Essential Crew Neck T-Shirt 3-Pack"),
+    productImageUrl: "", priceUsd: 29, priceRange: "$25–35",
+    category: "tops", affiliateUrl: null,
+    reason: "Wardrobe staple — pairs with everything",
+  },
+  {
+    id: "s2", platform: "Suggestion", productName: "Slim Fit Oxford Shirt",
+    productUrl: googleShoppingUrl("Slim Fit Oxford Shirt"),
+    productImageUrl: "", priceUsd: 35, priceRange: "$30–50",
+    category: "tops", affiliateUrl: null,
+    reason: "Perfect for work and smart casual",
+  },
+  {
+    id: "s3", platform: "Suggestion", productName: "Oversized Knit Sweater",
+    productUrl: googleShoppingUrl("Oversized Knit Sweater"),
+    productImageUrl: "", priceUsd: 60, priceRange: "$45–80",
+    category: "tops", affiliateUrl: null,
+    reason: "Great layering piece for fall/winter",
+  },
+  {
+    id: "s4", platform: "Suggestion", productName: "U-Airism Performance T-Shirt",
+    productUrl: googleShoppingUrl("U-Airism Performance T-Shirt"),
+    productImageUrl: "", priceUsd: 15, priceRange: "$12–20",
+    category: "tops", affiliateUrl: null,
+    reason: "Best basic tee for summer — breathable",
+  },
 
-  // Outerwear
-  { id: "s9", userId: "", platform: "Amazon", productName: "Denim Jacket Classic Trucker", productUrl: "https://amazon.com/dp/B07G2M9V4K", productImageUrl: "", priceUsd: 55, affiliateUrl: "https://amzn.to/denim-jacket", reason: "Layer over anything — timeless style" },
-  { id: "s10", userId: "", platform: "Nordstrom", productName: "Trench Coat Midi Length", productUrl: "https://nordstrom.com/trench", productImageUrl: "", priceUsd: 189, affiliateUrl: null, reason: "Investment piece — lasts for years" },
-  { id: "s11", userId: "", platform: "Zara", productName: "Puffer Jacket Lightweight", productUrl: "https://zara.com/puffer", productImageUrl: "", priceUsd: 90, affiliateUrl: null, reason: "Trendy but practical for cold weather" },
+  // ── Bottoms ────────────────────────────────────────────
+  {
+    id: "s5", platform: "Suggestion", productName: "501 Original Fit Jeans",
+    productUrl: googleShoppingUrl("501 Original Fit Jeans"),
+    productImageUrl: "", priceUsd: 70, priceRange: "$60–90",
+    category: "bottoms", affiliateUrl: null,
+    reason: "Classic fit every wardrobe needs",
+  },
+  {
+    id: "s6", platform: "Suggestion", productName: "Slim Fit Chinos",
+    productUrl: googleShoppingUrl("Slim Fit Chinos"),
+    productImageUrl: "", priceUsd: 45, priceRange: "$35–55",
+    category: "bottoms", affiliateUrl: null,
+    reason: "Best value chinos on the market",
+  },
+  {
+    id: "s7", platform: "Suggestion", productName: "Tailored Black Trousers",
+    productUrl: googleShoppingUrl("Tailored Black Trousers"),
+    productImageUrl: "", priceUsd: 52, priceRange: "$40–70",
+    category: "bottoms", affiliateUrl: null,
+    reason: "Essential for formal occasions",
+  },
+  {
+    id: "s8", platform: "Suggestion", productName: "Linen Blend Shorts",
+    productUrl: googleShoppingUrl("Linen Blend Shorts"),
+    productImageUrl: "", priceUsd: 25, priceRange: "$20–35",
+    category: "bottoms", affiliateUrl: null,
+    reason: "Summer essential — breathable fabric",
+  },
 
-  // Footwear
-  { id: "s12", userId: "", platform: "Nike (Amazon)", productName: "Air Force 1 '07 White", productUrl: "https://amazon.com/dp/B00DQRFLYK", productImageUrl: "", priceUsd: 110, affiliateUrl: "https://amzn.to/af1", reason: "#1 versatile sneaker — goes with 90% of outfits" },
-  { id: "s13", userId: "", platform: "Steve Madden", productName: "Marte Ankle Boot Black", productUrl: "https://stevemadden.com/boots", productImageUrl: "", priceUsd: 130, affiliateUrl: null, reason: "Elevates any outfit instantly" },
-  { id: "s14", userId: "", platform: "Amazon", productName: "Common Projects Achilles Low", productUrl: "https://amazon.com/dp/B01HIZ8C38", productImageUrl: "", priceUsd: 285, affiliateUrl: "https://amzn.to/cp-achilles", reason: "Clean minimalist white sneaker" },
-  { id: "s15", userId: "", platform: "Target", productName: "Canvas Slip-On Sneakers", productUrl: "https://target.com/slipon", productImageUrl: "", priceUsd: 30, affiliateUrl: null, reason: "Budget-friendly everyday option" },
+  // ── Outerwear ──────────────────────────────────────────
+  {
+    id: "s9", platform: "Suggestion", productName: "Denim Trucker Jacket",
+    productUrl: googleShoppingUrl("Denim Trucker Jacket"),
+    productImageUrl: "", priceUsd: 65, priceRange: "$50–90",
+    category: "outerwear", affiliateUrl: null,
+    reason: "Layer over anything — timeless style",
+  },
+  {
+    id: "s10", platform: "Suggestion", productName: "Midi Trench Coat",
+    productUrl: googleShoppingUrl("Midi Trench Coat"),
+    productImageUrl: "", priceUsd: 150, priceRange: "$120–250",
+    category: "outerwear", affiliateUrl: null,
+    reason: "Investment piece — lasts for years",
+  },
+  {
+    id: "s11", platform: "Suggestion", productName: "Lightweight Puffer Jacket",
+    productUrl: googleShoppingUrl("Lightweight Puffer Jacket"),
+    productImageUrl: "", priceUsd: 90, priceRange: "$70–130",
+    category: "outerwear", affiliateUrl: null,
+    reason: "Trendy but practical for cold weather",
+  },
 
-  // Dresses
-  { id: "s16", userId: "", platform: "Revolve", productName: "Little Black Dress Midi", productUrl: "https://revolve.com/lbd", productImageUrl: "", priceUsd: 128, affiliateUrl: null, reason: "Every woman needs an LBD" },
-  { id: "s17", userId: "", platform: "H&M", productName: "Floral Wrap Dress", productUrl: "https://hm.com/wrap-dress", productImageUrl: "", priceUsd: 50, affiliateUrl: null, reason: "Great for brunch, dates, and summer events" },
+  // ── Footwear ───────────────────────────────────────────
+  {
+    id: "s12", platform: "Suggestion", productName: "White Leather Sneakers (AF1 style)",
+    productUrl: googleShoppingUrl("White Leather Sneakers"),
+    productImageUrl: "", priceUsd: 110, priceRange: "$90–140",
+    category: "footwear", affiliateUrl: null,
+    reason: "#1 versatile sneaker — goes with 90% of outfits",
+  },
+  {
+    id: "s13", platform: "Suggestion", productName: "Black Ankle Boots",
+    productUrl: googleShoppingUrl("Black Ankle Boots"),
+    productImageUrl: "", priceUsd: 120, priceRange: "$80–160",
+    category: "footwear", affiliateUrl: null,
+    reason: "Elevates any outfit instantly",
+  },
+  {
+    id: "s14", platform: "Suggestion", productName: "Minimalist White Low-Top Sneakers",
+    productUrl: googleShoppingUrl("Minimalist White Low-Top Sneakers"),
+    productImageUrl: "", priceUsd: 200, priceRange: "$150–300",
+    category: "footwear", affiliateUrl: null,
+    reason: "Clean minimalist white sneaker",
+  },
+  {
+    id: "s15", platform: "Suggestion", productName: "Canvas Slip-On Sneakers",
+    productUrl: googleShoppingUrl("Canvas Slip-On Sneakers"),
+    productImageUrl: "", priceUsd: 30, priceRange: "$20–45",
+    category: "footwear", affiliateUrl: null,
+    reason: "Budget-friendly everyday option",
+  },
 
-  // Accessories
-  { id: "s18", userId: "", platform: "Amazon", productName: "Leather Belt Classic Buckle", productUrl: "https://amazon.com/dp/B07FZ8N4SV", productImageUrl: "", priceUsd: 18, affiliateUrl: "https://amzn.to/leather-belt", reason: "Finishing touch for any outfit" },
-  { id: "s19", userId: "", platform: "Amazon", productName: "Minimalist Watch Leather Band", productUrl: "https://amazon.com/dp/B08L9YPQN4", productImageUrl: "", priceUsd: 45, affiliateUrl: "https://amzn.to/minimal-watch", reason: "Elevates casual and smart-casual looks" },
-  { id: "s20", userId: "", platform: "ASOS", productName: "Silk Scarf Neutral Print", productUrl: "https://asos.com/scarf", productImageUrl: "", priceUsd: 22, affiliateUrl: null, reason: "Adds personality to simple outfits" },
+  // ── Accessories ─────────────────────────────────────────
+  {
+    id: "s16", platform: "Suggestion", productName: "Leather Belt Classic Buckle",
+    productUrl: googleShoppingUrl("Leather Belt Classic Buckle"),
+    productImageUrl: "", priceUsd: 22, priceRange: "$15–35",
+    category: "accessories", affiliateUrl: null,
+    reason: "Finishing touch for any outfit",
+  },
+  {
+    id: "s17", platform: "Suggestion", productName: "Minimalist Watch Leather Band",
+    productUrl: googleShoppingUrl("Minimalist Watch Leather Band"),
+    productImageUrl: "", priceUsd: 55, priceRange: "$40–80",
+    category: "accessories", affiliateUrl: null,
+    reason: "Elevates casual and smart-casual looks",
+  },
+  {
+    id: "s18", platform: "Suggestion", productName: "Neutral Print Silk Scarf",
+    productUrl: googleShoppingUrl("Neutral Print Silk Scarf"),
+    productImageUrl: "", priceUsd: 28, priceRange: "$18–40",
+    category: "accessories", affiliateUrl: null,
+    reason: "Adds personality to simple outfits",
+  },
+  {
+    id: "s19", platform: "Suggestion", productName: "Canvas Tote Bag Everyday",
+    productUrl: googleShoppingUrl("Canvas Tote Bag Everyday"),
+    productImageUrl: "", priceUsd: 35, priceRange: "$25–50",
+    category: "accessories", affiliateUrl: null,
+    reason: "Practical and stylish everyday carry",
+  },
+  {
+    id: "s20", platform: "Suggestion", productName: "Polarized Sunglasses Classic",
+    productUrl: googleShoppingUrl("Polarized Sunglasses Classic"),
+    productImageUrl: "", priceUsd: 45, priceRange: "$30–70",
+    category: "accessories", affiliateUrl: null,
+    reason: "Instant upgrade to any look",
+  },
 ];
+
+/** Build a Google Shopping search URL for a product name */
+function googleShoppingUrl(query: string): string {
+  return `https://www.google.com/search?q=${encodeURIComponent(query)}&tbm=shop`;
+}
+
+const VALID_CATEGORIES: Set<string> = new Set(["tops", "bottoms", "outerwear", "footwear", "accessories"]);
 
 export async function GET(req: NextRequest) {
   try {
@@ -47,46 +176,20 @@ export async function GET(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const searchParams = req.nextUrl.searchParams;
-    const category = searchParams.get("category");
-    const color = searchParams.get("color");
-    const platform = searchParams.get("platform");
-    const minPrice = searchParams.get("minPrice");
-    const maxPrice = searchParams.get("maxPrice");
+    const rawCategory = searchParams.get("category");
 
-    let results = [...SHOP_CATALOG];
+    let results = [...CATALOG];
 
+    // Filter by canonical category field
+    const category = rawCategory && VALID_CATEGORIES.has(rawCategory) ? rawCategory : undefined;
     if (category) {
-      results = results.filter((s) =>
-        s.productName.toLowerCase().includes(category.toLowerCase()) ||
-        s.reason.toLowerCase().includes(category.toLowerCase())
-      );
-    }
-
-    if (color) {
-      results = results.filter((s) =>
-        s.productName.toLowerCase().includes(color.toLowerCase())
-      );
-    }
-
-    if (platform) {
-      results = results.filter((s) =>
-        s.platform.toLowerCase() === platform.toLowerCase()
-      );
-    }
-
-    if (minPrice) {
-      results = results.filter((s) => s.priceUsd >= Number(minPrice));
-    }
-
-    if (maxPrice) {
-      results = results.filter((s) => s.priceUsd <= Number(maxPrice));
+      results = results.filter((p) => p.category === category);
     }
 
     return NextResponse.json({
-      suggestions: results,
+      products: results,
+      category: category ?? "all",
       total: results.length,
-      filters: { category, color, platform, minPrice, maxPrice },
-      platforms: [...new Set(SHOP_CATALOG.map((s) => s.platform))],
     });
   } catch (error) {
     console.error("Shop error:", error);

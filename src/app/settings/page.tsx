@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import PageHeader from "@/components/ui/PageHeader";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 
@@ -17,6 +18,51 @@ export default function SettingsPage() {
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleExportData = useCallback(async () => {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/export-data");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Export failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `clad-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Data exported!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  }, []);
+
+  const handleDeleteAccount = useCallback(async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmed: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Deletion failed");
+      toast.success("Account deleted successfully");
+      router.push("/");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete account");
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }, [router]);
 
   useEffect(() => {
     fetch("/api/profile").then((r) => r.json()).then((data) => {
@@ -51,8 +97,8 @@ export default function SettingsPage() {
                 { label: "Notification Preferences", action: () => {} },
                 { label: "Connected Accounts", action: () => {} },
               ].map((item) => (
-                <button key={item.label} onClick={item.action} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-foreground)', transition: 'all 150ms ease' }}>
-                  <span>{item.label}</span>
+                <button key={item.label} onClick={item.action} disabled={(item as { disabled?: boolean }).disabled} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', cursor: (item as { disabled?: boolean }).disabled ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-foreground)', opacity: (item as { disabled?: boolean }).disabled ? 0.6 : 1, transition: 'all 150ms ease' }}>
+                  <span>{item.label}{exporting && item.label.includes("Export") ? "…" : ""}</span>
                   <span style={{ color: 'var(--color-muted-foreground)' }}>→</span>
                 </button>
               ))}
@@ -68,7 +114,7 @@ export default function SettingsPage() {
           {[
             { label: "View Statistics", action: () => router.push("/stats") },
             { label: "Wardrobe Gap Analysis", action: () => router.push("/gap-analysis") },
-            { label: "Export Wardrobe Data (JSON)", action: () => {} },
+            { label: "Export Wardrobe Data (JSON)", action: handleExportData, disabled: exporting },
           ].map((item) => (
             <button key={item.label} onClick={item.action} style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--color-muted)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--color-foreground)', transition: 'all 150ms ease' }}>
               <span>{item.label}</span>
@@ -126,7 +172,7 @@ export default function SettingsPage() {
             <p style={{ fontSize: 14, color: 'var(--color-destructive)', fontFamily: 'var(--font-body)', marginBottom: 12, lineHeight: 1.6 }}>This will permanently delete all your wardrobe items, outfits, and preferences. This cannot be undone.</p>
             <div style={{ display: 'flex', gap: 12 }}>
               <button onClick={() => setShowDeleteConfirm(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
-              <button style={{ flex: 1, background: 'var(--color-destructive)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', padding: '12px 16px', cursor: 'pointer', fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-body)' }}>Delete Everything</button>
+              <button onClick={handleDeleteAccount} disabled={deleting} style={{ flex: 1, background: 'var(--color-destructive)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', padding: '12px 16px', cursor: deleting ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-body)', opacity: deleting ? 0.6 : 1 }}>{deleting ? "Deleting…" : "Delete Everything"}</button>
             </div>
           </div>
         )}

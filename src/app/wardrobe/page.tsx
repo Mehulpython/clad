@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { Shirt, ChevronLeft, ChevronRight } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 import type { WardrobeItem } from "@/lib/types";
+import { toast } from "sonner";
+
+const PAGE_SIZE = 24;
 
 const CATEGORIES = [
   { value: "", label: "All", icon: "" },
@@ -24,21 +28,43 @@ export default function WardrobePage() {
   const [activeCategory, setActiveCategory] = useState("");
   const [selectedItem, setSelectedItem] = useState<WardrobeItem | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const gridRef = useRef<HTMLDivElement>(null);
 
-  const fetchWardrobe = async () => {
+  const fetchWardrobe = async (pageNum?: number) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      const currentPage = pageNum ?? page;
+      params.set("page", String(currentPage));
+      params.set("limit", String(PAGE_SIZE));
       if (activeCategory) params.set("category", activeCategory);
-      if (searchQuery) params.set("color", searchQuery);
+      if (searchQuery) params.set("search", searchQuery);
       const res = await fetch("/api/wardrobe?" + params.toString());
-      if (res.ok) { const data = await res.json(); setItems(data.items || []); }
+      if (res.ok) {
+        const data = await res.json();
+        setItems(data.items || []);
+        setTotalItems(data.total || 0);
+        setTotalPages(data.totalPages || 1);
+        if (pageNum) setPage(pageNum);
+      }
     } catch (err) { console.error("Failed to fetch wardrobe:", err); }
     setLoading(false);
   };
 
-  useEffect(() => { fetchWardrobe(); }, [activeCategory]);
-  useEffect(() => { const t = setTimeout(() => fetchWardrobe(), 400); return () => clearTimeout(t); }, [searchQuery]);
+  useEffect(() => { fetchWardrobe(1); }, [activeCategory]);
+  useEffect(() => { const t = setTimeout(() => fetchWardrobe(1), 400); return () => clearTimeout(t); }, [searchQuery]);
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages || p === page) return;
+    fetchWardrobe(p);
+    // Smooth scroll to top of grid
+    if (gridRef.current) {
+      gridRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   const toggleFavorite = async (id: string) => {
     const item = items.find((i) => i.id === id); if (!item) return;
@@ -55,9 +81,15 @@ export default function WardrobePage() {
   };
 
   const deleteItem = async (id: string) => {
-    await fetch("/api/wardrobe/" + id, { method: "DELETE" });
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    if (selectedItem?.id === id) setSelectedItem(null);
+    try {
+      const res = await fetch("/api/wardrobe/" + id, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      if (selectedItem?.id === id) setSelectedItem(null);
+      toast.success("Item removed");
+    } catch {
+      toast.error("Something went wrong");
+    }
   };
 
   const pillStyle = (active: boolean): React.CSSProperties => ({
@@ -74,7 +106,7 @@ export default function WardrobePage() {
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px' }}>
       <PageHeader
         title="My Wardrobe"
-        description={`${items.length} item${items.length !== 1 ? "s" : ""}${laundryCount > 0 ? ` · ${laundryCount} in laundry` : ""}`}
+        description={`${totalItems} item${totalItems !== 1 ? "s" : ""}${laundryCount > 0 ? ` · ${laundryCount} in laundry` : ""}`}
         action={<button onClick={() => router.push("/upload")} className="btn-primary" style={{ fontSize: 13 }}>+ Add Items</button>}
       />
 
@@ -114,22 +146,59 @@ export default function WardrobePage() {
         </div>
       </div>
 
-      {/* Empty */}
+      {/* Empty State */}
       {!loading && items.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '80px 24px' }}>
-          <p style={{ fontSize: 48, marginBottom: 16 }}>👕</p>
-          <h3 style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 8 }}>Your wardrobe is empty</h3>
-          <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', maxWidth: 400, margin: '0 auto 24px' }}>
-            Upload photos of your clothing to get started. Our AI will identify each piece automatically.
-          </p>
-          <button onClick={() => router.push("/upload")} className="btn-primary">Upload Your First Item →</button>
+        <div style={{
+          textAlign: 'center', padding: '80px 24px',
+          background: 'linear-gradient(135deg, #FDF2F8 0%, #FFF1F5 50%, #FDF2F8 100%)',
+          borderRadius: 'var(--radius-xl)', border: '1px solid rgba(190,24,93,0.12)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          {/* Decorative dots pattern */}
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.4,
+            backgroundImage: 'radial-gradient(circle, rgba(190,24,93,0.08) 1px, transparent 1px)',
+            backgroundSize: '20px 20px'
+          }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 80, height: 80, borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(236,72,153,0.12))',
+              marginBottom: 20,
+              animation: 'gentleFloat 3s ease-in-out infinite',
+            }} key="empty-icon">
+              <Shirt size={40} strokeWidth={1.5} color="#BE185D" />
+            </div>
+            <h3 style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 8, color: 'var(--color-foreground)' }}>
+              Your wardrobe is empty
+            </h3>
+            <p style={{ fontSize: 14.5, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', maxWidth: 380, margin: '0 auto 28px', lineHeight: 1.6 }}>
+              Start by uploading your first piece of clothing
+            </p>
+            <button
+              onClick={() => router.push("/upload")}
+              className="btn-primary"
+              style={{ fontSize: 14, padding: '12px 28px', borderRadius: 'var(--radius-lg)' }}
+            >
+              Upload Photos →
+            </button>
+          </div>
+          <style>{`@keyframes gentleFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }`}</style>
         </div>
       )}
 
       {/* Loading */}
       {loading && <LoadingSkeleton type="card" rows={5} />}
 
+      {/* Item count */}
+      {!loading && totalItems > 0 && (
+        <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', marginBottom: 16 }}>
+          Showing {totalItems === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, totalItems)} of {totalItems} items
+        </p>
+      )}
+
       {/* Grid View */}
+      <div ref={gridRef}>
       {!loading && items.length > 0 && viewMode === "grid" && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 16 }}>
           {items.map((item) => (
@@ -189,7 +258,89 @@ export default function WardrobePage() {
         </div>
       )}
 
-      {/* Detail Modal */}
+      </div>
+
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 32, flexWrap: 'wrap' }}>
+          {/* Previous */}
+          <button
+            onClick={() => goToPage(page - 1)}
+            disabled={page <= 1}
+            className="btn"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '8px 14px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600,
+              fontFamily: 'var(--font-body)', cursor: page <= 1 ? 'not-allowed' : 'pointer',
+              border: '1px solid var(--color-border)', background: 'var(--color-surface)',
+              color: page <= 1 ? 'var(--color-muted-foreground)' : 'var(--color-foreground)',
+              opacity: page <= 1 ? 0.5 : 1, transition: 'all 150ms ease',
+            }}
+          >
+            <ChevronLeft size={16} /> Prev
+          </button>
+
+          {/* Page numbers — smart ellipsis */}
+          {(() => {
+            const pages: (number | "...")[] = [];
+            const showEllipsis = totalPages > 7;
+
+            if (!showEllipsis) {
+              for (let i = 1; i <= totalPages; i++) pages.push(i);
+            } else {
+              pages.push(1);
+              if (page > 3) pages.push("...");
+              const start = Math.max(2, page - 1);
+              const end = Math.min(totalPages - 1, page + 1);
+              for (let i = start; i <= end; i++) pages.push(i);
+              if (page < totalPages - 2) pages.push("...");
+              pages.push(totalPages);
+            }
+
+            return (
+              <div style={{ display: 'flex', gap: 4 }}>
+                {pages.map((p, idx) =>
+                  p === "..." ? (
+                    <span key={`ellipsis-${idx}`} style={{ padding: '8px 4px', fontSize: 13, color: 'var(--color-muted-foreground)' }}>…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => goToPage(p)}
+                      style={{
+                        padding: '8px 12px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 700,
+                        fontFamily: 'var(--font-body)', cursor: 'pointer', border: '1px solid',
+                        transition: 'all 150ms ease', minWidth: 38, textAlign: 'center',
+                        ...(p === page
+                          ? { background: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' }
+                          : { background: 'var(--color-surface)', color: 'var(--color-foreground)', borderColor: 'var(--color-border)' }),
+                      }}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Next */}
+          <button
+            onClick={() => goToPage(page + 1)}
+            disabled={page >= totalPages}
+            className="btn"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '8px 14px', borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 600,
+              fontFamily: 'var(--font-body)', cursor: page >= totalPages ? 'not-allowed' : 'pointer',
+              border: '1px solid var(--color-border)', background: 'var(--color-surface)',
+              color: page >= totalPages ? 'var(--color-muted-foreground)' : 'var(--color-foreground)',
+              opacity: page >= totalPages ? 0.5 : 1, transition: 'all 150ms ease',
+            }}
+          >
+            Next <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
       {selectedItem && (
         <div onClick={() => setSelectedItem(null)} style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--color-bg)', borderRadius: 'var(--radius-xl)', maxWidth: 720, width: '100%', maxHeight: '90vh', overflow: 'auto', border: '1px solid var(--color-border)', boxShadow: '0 25px 50px rgba(0,0,0,0.15)' }}>

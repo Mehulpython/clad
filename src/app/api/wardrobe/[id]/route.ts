@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getSupabase } from "@/lib/supabase";
+import { deleteImage } from "@/lib/storage";
 
 // PATCH: Update an item (correct AI tags, favorite, laundry state, etc.)
 export async function PATCH(
@@ -51,7 +52,7 @@ export async function PATCH(
   }
 }
 
-// DELETE: Remove item from wardrobe
+// DELETE: Remove item from wardrobe (and its stored images)
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -62,6 +63,16 @@ export async function DELETE(
 
     const { id } = await params;
     const supabase = await getSupabase();
+
+    // Fetch the item first so we can clean up stored images
+    const { data: existingItem } = await supabase
+      .from("wardrobe_items")
+      .select("image_url, thumbnail_url")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .single();
+
+    // Delete from database
     const { error } = await supabase
       .from("wardrobe_items")
       .delete()
@@ -70,6 +81,12 @@ export async function DELETE(
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // Best-effort cleanup of stored image files
+    if (existingItem) {
+      if (existingItem.image_url) await deleteImage(existingItem.image_url as string);
+      if (existingItem.thumbnail_url) await deleteImage(existingItem.thumbnail_url as string);
     }
 
     return NextResponse.json({ success: true });

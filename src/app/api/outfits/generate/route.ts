@@ -4,16 +4,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getSupabase } from "@/lib/supabase";
+import { checkRateLimit } from "@/lib/rate-limit";
 import {
   generateOutfitCandidates,
   refineOutfitsWithAI,
 } from "@/lib/outfit-engine";
-import type { OutfitContext, GeneratedOutfit, WardrobeItem, Occasion, Season, Mood } from "@/lib/types";
+import { mapWardrobeRows } from "@/lib/mappers";
+import type { OutfitContext, GeneratedOutfit, Occasion, Season, Mood } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    // Rate limit: 10 requests per minute per user
+    const rateLimit = checkRateLimit(`${userId}:outfits-generate`, 10);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Try again shortly." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimit.retryAfter) },
+        }
+      );
+    }
 
     const body = await req.json();
     const context: OutfitContext = {
@@ -49,41 +63,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Map DB rows to WardrobeItem type
-    const wardrobe: WardrobeItem[] = (rawItems as Array<Record<string, unknown>>).map((row) => ({
-      id: row.id as string,
-      userId: row.user_id as string,
-      itemType: (row.item_type as string) as WardrobeItem["itemType"],
-      category: (row.category as string) as WardrobeItem["category"],
-      subtype: (row.subtype as string) || "",
-      primaryColor: (row.primary_color as string) || "unknown",
-      secondaryColor: row.secondary_color as string | null,
-      pattern: (row.pattern as string) as WardrobeItem["pattern"],
-      material: (row.material as string | null) as WardrobeItem["material"],
-      occasions: (Array.isArray(row.occasions) ? row.occasions : []) as Occasion[],
-      seasons: (Array.isArray(row.seasons) ? row.seasons : []) as Season[],
-      formalityLevel: Number(row.formality_level) || 3,
-      tags: (Array.isArray(row.tags) ? row.tags : []) as string[],
-      aiConfidence: Number(row.ai_confidence) || 0.5,
-      brand: row.brand as string | null,
-      size: row.size_text as string | null,
-      purchasedFrom: row.purchased_from as string | null,
-      priceUsd: row.price_usd as number | null,
-      purchaseDate: row.purchase_date as string | null,
-      imageUrl: (row.image_url as string) || "",
-      thumbnailUrl: (row.thumbnail_url as string) || "",
-      aiRawOutput: (row.ai_raw_output as Record<string, unknown>) || null,
-      isFavorite: Boolean(row.is_favorite),
-      isArchived: Boolean(row.is_archived),
-      isInLaundry: Boolean(row.is_in_laundry),
-      wearCount: Number(row.wear_count) || 0,
-      lastWornAt: row.last_worn_at as string | null,
-      correctedFields: (Array.isArray(row.corrected_fields) ? row.corrected_fields : []) as string[],
-      suggestedName:
-        ((row.ai_raw_output as Record<string, unknown>)?.suggestedName as string) ||
-        ((row.primary_color as string) + " " + (row.item_type as string)),
-      createdAt: (row.created_at as string) || "",
-      updatedAt: (row.updated_at as string) || "",
-    }));
+    const wardrobe = mapWardrobeRows(rawItems as Array<Record<string, unknown>>);
 
     // Fetch user profile for style preferences
     const { data: profile } = await supabase

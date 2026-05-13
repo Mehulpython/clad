@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
 
@@ -74,11 +75,42 @@ export default function OutfitsPage() {
       {loading && <LoadingSkeleton type="card" rows={3} />}
 
       {!loading && displayed.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '64px 24px' }}>
-          <p style={{ fontSize: 40, marginBottom: 12 }}>👗</p>
-          <h3 style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 8 }}>No outfits yet</h3>
-          <p style={{ fontSize: 14, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', marginBottom: 24 }}>Generate your first outfit to see it here.</p>
-          <button onClick={() => router.push("/generate")} className="btn-primary">✨ Generate Outfit</button>
+        <div style={{
+          textAlign: 'center', padding: '72px 24px',
+          background: 'linear-gradient(135deg, #FDF2F8 0%, #FFF1F5 50%, #FDF2F8 100%)',
+          borderRadius: 'var(--radius-xl)', border: '1px solid rgba(190,24,93,0.12)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          {/* Decorative dots pattern */}
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.4,
+            backgroundImage: 'radial-gradient(circle, rgba(190,24,93,0.08) 1px, transparent 1px)',
+            backgroundSize: '20px 20px'
+          }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 80, height: 80, borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(190,24,93,0.08), rgba(236,72,153,0.12))',
+              marginBottom: 20,
+              animation: 'gentleFloat 3s ease-in-out infinite',
+            }} key="empty-icon">
+              <Sparkles size={40} strokeWidth={1.5} color="#BE185D" />
+            </div>
+            <h3 style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--font-display)', marginBottom: 8, color: 'var(--color-foreground)' }}>
+              No outfits yet
+            </h3>
+            <p style={{ fontSize: 14.5, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', maxWidth: 380, margin: '0 auto 28px', lineHeight: 1.6 }}>
+              Generate your first AI-curated outfit
+            </p>
+            <button
+              onClick={() => router.push("/generate")}
+              className="btn-primary"
+              style={{ fontSize: 14, padding: '12px 28px', borderRadius: 'var(--radius-lg)' }}
+            >
+              Generate Outfits →
+            </button>
+          </div>
+          <style>{`@keyframes gentleFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }`}</style>
         </div>
       )}
 

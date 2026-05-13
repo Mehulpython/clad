@@ -4,8 +4,13 @@ import "./globals.css";
 import Navigation from "@/components/Navigation";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 import JsonLd from "@/components/JsonLd";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://clad.app";
+
+export const metadata: Metadata = {
   title: {
     default: "Clad — AI Smart Wardrobe & Outfit Generator",
     template: "%s | Clad — AI Smart Wardrobe",
@@ -26,7 +31,7 @@ const inter = Inter({ subsets: ["latin"] });
     "capsule wardrobe",
     "virtual closet",
   ],
-  creators: ["Clad"],
+  creator: "Clad",
   metadataBase: new URL(SITE_URL),
   openGraph: {
     type: "website",
@@ -86,7 +91,7 @@ export default function RootLayout({
     logo: `${SITE_URL}/icon-512.png`,
     description:
       "AI-powered smart wardrobe application that helps you organize, style, and optimize your clothing using GPT-4o Vision.",
-    sameAs: [], // Add social URLs when available
+    sameAs: [],
     foundingDate: "2026",
     contactPoint: {
       "@type": "ContactPoint",
@@ -122,6 +127,21 @@ export default function RootLayout({
   };
 
   return (
-<<<<<<< HEAD
     <html lang="en">
-      <body className="pb-20 md:pb-0">
+      <body className={`${inter.className} pb-20 md:pb-0`}>
+        <JsonLd data={organizationSchema} />
+        <JsonLd data={webAppSchema} />
+        <Navigation />
+        <ServiceWorkerRegistration />
+        <Toaster
+          position="bottom-right"
+          theme="light"
+          toastOptions={{
+            style: { background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px' },
+          }}
+        />
+        {children}
+      </body>
+    </html>
+  );
+}

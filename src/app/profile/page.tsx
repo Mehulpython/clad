@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import LoadingSkeleton from "@/components/ui/LoadingSkeleton";
+import { toast } from "sonner";
 
 interface UserProfileData {
   displayName: string | null;
@@ -45,7 +46,7 @@ export default function ProfilePage() {
   async function handleSave() {
     setSaving(true);
     try {
-      await fetch("/api/profile", {
+      const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -53,6 +54,10 @@ export default function ProfilePage() {
           stylePreferences: { preferredStyle, riskTolerance, favoriteColors },
         }),
       });
+      if (!res.ok) throw new Error("Save failed");
+      toast.success("Preferences updated");
+    } catch {
+      toast.error("Failed to save");
     } finally {
       setSaving(false);
     }
