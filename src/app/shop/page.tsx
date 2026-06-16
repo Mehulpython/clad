@@ -91,42 +91,41 @@ function ShopPageContent() {
       <PageHeader
         title="Shop Suggestions"
         description="AI-curated items to fill wardrobe gaps"
-        badge="Coming Soon"
+        badge="Curated"
       />
 
-      {/* ── Honesty Banner ─────────────────────────────── */}
       <div
         style={{
-          background: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #fef3c7 100%)",
+          background: "linear-gradient(135deg, #fdf2f8 0%, #fff1f5 50%, #fdf2f8 100%)",
           borderRadius: "var(--radius-lg)",
           padding: "20px 24px",
           marginBottom: 28,
-          border: "1px solid #fdba74",
+          border: "1px solid rgba(190,24,93,0.12)",
         }}
       >
         <p
           style={{
             fontSize: 13,
             fontWeight: 600,
-            color: "#9a3412",
+            color: "var(--color-primary)",
             fontFamily: "var(--font-display)",
             marginBottom: 6,
           }}
         >
-          ✨ Coming Soon — AI-Curated Suggestions
+          {"✨ AI-Curated Suggestions"}
         </p>
         <p
           style={{
             fontSize: 13,
-            color: "#9a3412",
+            color: "var(--color-muted-foreground)",
             fontFamily: "var(--font-body)",
             lineHeight: 1.6,
             margin: 0,
           }}
         >
-          We don&apos;t have a real store yet. These are AI-suggested items based on common
-          wardrobe gaps. Click &quot;Search on Google&quot; to compare real prices across retailers.
-          A full shop with affiliate links is on our roadmap!
+          {"These are wardrobe staples recommended by our AI. Click any item to compare prices across retailers. For personalized recommendations, check out "}
+          <a href="/gap-analysis" style={{ color: "var(--color-primary)", fontWeight: 600, textDecoration: "underline" }}>{"Gap Analysis"}</a>
+          {"."}
         </p>
       </div>
 
@@ -321,7 +320,7 @@ function ShopPageContent() {
                   textDecoration: "none",
                 }}
               >
-                🔍 Search on Google
+                Compare Prices
               </a>
             </div>
           ))}
