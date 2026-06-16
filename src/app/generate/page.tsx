@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/ui/PageHeader";
 import { toast } from "sonner";
 
@@ -11,6 +12,10 @@ interface GeneratedOutfit {
   reasoning: string;
   colorTheory: string;
   confidence: number;
+}
+
+interface SavedOutfit extends GeneratedOutfit {
+  isFavorite?: boolean;
 }
 
 const OCCASIONS = [
@@ -36,8 +41,9 @@ const MOODS = [
 ];
 
 export default function GeneratePage() {
+  const router = useRouter();
   const [generating, setGenerating] = useState(false);
-  const [outfits, setOutfits] = useState<GeneratedOutfit[]>([]);
+  const [outfits, setOutfits] = useState<SavedOutfit[]>([]);
   const [selectedOccasion, setSelectedOccasion] = useState("casual");
   const [selectedMood, setSelectedMood] = useState("comfortable");
   const [weather, setWeather] = useState<{ tempF: number; condition: string } | null>(null);
@@ -161,7 +167,32 @@ export default function GeneratePage() {
                   <h4 style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--font-display)' }}>{outfit.name}</h4>
                   <p style={{ fontSize: 12, color: 'var(--color-primary)', fontFamily: 'var(--font-body)', marginTop: 2 }}>{outfit.colorTheory}</p>
                 </div>
-                <span className="badge badge-primary">{Math.round(outfit.confidence * 100)}%</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="badge badge-primary">{Math.round(outfit.confidence * 100)}%</span>
+                  {outfit.id && (
+                    <button
+                      onClick={async () => {
+                        const newFav = !outfit.isFavorite;
+                        setOutfits((prev) => prev.map((o, i) => i === idx ? { ...o, isFavorite: newFav } : o));
+                        try {
+                          await fetch(`/api/outfits/${outfit.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ isFavorite: newFav }),
+                          });
+                          toast.success(newFav ? "Added to favorites! ❤️" : "Removed from favorites");
+                        } catch {
+                          setOutfits((prev) => prev.map((o, i) => i === idx ? { ...o, isFavorite: !newFav } : o));
+                          toast.error("Failed to update");
+                        }
+                      }}
+                      aria-label={outfit.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18 }}
+                    >
+                      {outfit.isFavorite ? "❤️" : "🤍"}
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(60px, 1fr))', gap: 8, marginBottom: 14 }}>
@@ -173,6 +204,32 @@ export default function GeneratePage() {
               </div>
 
               <p style={{ fontSize: 13, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)', lineHeight: 1.7 }}>{outfit.reasoning}</p>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <button
+                  onClick={() => {
+                    const shareText = `My AI-generated outfit: ${outfit.name} — ${outfit.colorTheory}. Powered by Clad.`;
+                    if (navigator.share) {
+                      navigator.share({ title: outfit.name, text: shareText }).catch(() => {});
+                    } else {
+                      navigator.clipboard.writeText(shareText);
+                      toast.success("Copied to clipboard!");
+                    }
+                  }}
+                  className="btn-secondary"
+                  style={{ flex: 1, fontSize: 12 }}
+                >
+                  📤 Share
+                </button>
+                <button
+                  onClick={() => router.push("/wardrobe")}
+                  className="btn-secondary"
+                  style={{ flex: 1, fontSize: 12 }}
+                >
+                  👔 View Items
+                </button>
+              </div>
             </div>
           ))}
         </div>
