@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import StyleCoachChat from "@/components/StyleCoachChat";
 import JsonLd from "@/components/JsonLd";
 import { Toaster } from "sonner";
 
@@ -141,6 +142,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <StyleCoachChat />
       </body>
     </html>
   );
