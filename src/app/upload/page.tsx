@@ -25,6 +25,7 @@ export default function UploadPage() {
   const [items, setItems] = useState<UploadedItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prevCountRef = useRef(0);
 
@@ -53,11 +54,15 @@ export default function UploadPage() {
 
   const startProcessing = async () => {
     setIsProcessing(true);
+    const slowTimer = setTimeout(() => setShowSlowWarning(true), 15000);
     for (const item of items.filter((i) => i.status === "uploading")) await processItem(item);
+    clearTimeout(slowTimer);
+    setShowSlowWarning(false);
     setIsProcessing(false);
     const done = items.filter((i) => i.status === "done").length;
     const errs = items.filter((i) => i.status === "error").length;
-    if (done > 0 && errs === 0) toast.success("Photos analyzed & added!");
+    if (done > 0 && errs === 0) toast.success(`Photos analyzed & added! (${done})`);
+    else if (done > 0 && errs > 0) toast.warning(`${done} succeeded, ${errs} failed`);
     else if (errs > 0) toast.error("Upload failed");
   };
 
@@ -123,6 +128,13 @@ export default function UploadPage() {
             </div>
           )}
 
+          {showSlowWarning && (
+            <div style={{ padding: '12px 16px', borderRadius: 'var(--radius-md)', background: 'rgba(202,138,4,0.06)', border: '1px solid rgba(202,138,4,0.2)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>⏳</span>
+              <span style={{ fontSize: 13, color: '#CA8A04', fontFamily: 'var(--font-body)' }}>AI is working hard — this can take up to 30 seconds per item. Hang tight!</span>
+            </div>
+          )}
+
           {/* Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16 }}>
             {items.map((item) => {
@@ -139,7 +151,10 @@ export default function UploadPage() {
                       </div>
                     )}
                     {/* Remove */}
-                    <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'white' }}>×</button>
+                    <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} aria-label="Remove item" style={{ position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'white' }}>×</button>
+                    {item.status === "error" && (
+                      <button onClick={(e) => { e.stopPropagation(); processItem(item); }} aria-label="Retry upload" style={{ position: 'absolute', bottom: 6, right: 6, padding: '4px 10px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.9)', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: 'var(--color-primary)' }}>Retry</button>
+                    )}
                   </div>
                   {/* Analysis */}
                   {item.analysis && (
