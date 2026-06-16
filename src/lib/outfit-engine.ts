@@ -1,7 +1,7 @@
 // ─── Outfit Generation Engine ───────────────────────────────
 // Algorithmic candidate generation + AI refinement.
 
-import OpenAI from "openai";
+import { getOpenAIClient, withRetry } from "./vision";
 import type {
   WardrobeItem,
   GeneratedOutfit,
@@ -11,7 +11,12 @@ import type {
   Occasion,
 } from "./types";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy-init client to avoid build-time crash when OPENAI_API_KEY is not set
+let _openai: ReturnType<typeof getOpenAIClient> | null = null;
+function getClient() {
+  if (!_openai) _openai = getOpenAIClient();
+  return _openai;
+}
 
 // ── Color Harmony Wheel ────────────────────────────────────
 
@@ -305,13 +310,15 @@ export async function refineOutfitsWithAI(
   const prompt = promptLines.join("\n");
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 1500,
-      response_format: { type: "json_object" },
-    });
+    const response = await withRetry(() =>
+      getClient().chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
+        max_tokens: 1500,
+        response_format: { type: "json_object" },
+      })
+    );
 
     const content = response.choices[0]?.message?.content || "{}";
     var parsed: any;

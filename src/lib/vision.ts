@@ -1,6 +1,7 @@
 // ─── OpenAI / Vision Integration ────────────────────────────
 // Handles: clothing photo analysis, outfit generation,
 // pre-purchase scanning, gap analysis.
+// Includes: retry with exponential backoff, graceful fallbacks.
 
 import OpenAI from "openai";
 
@@ -10,6 +11,72 @@ export function getOpenAIClient() {
   return new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
+}
+
+// ─── Retry with Exponential Backoff ────────────────────────
+
+const MAX_RETRIES = 3;
+const INITIAL_DELAY_MS = 1000;
+
+interface RetryOptions {
+  maxRetries?: number;
+  initialDelayMs?: number;
+  retryableStatuses?: number[];
+}
+
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {}
+): Promise<T> {
+  const {
+    maxRetries = MAX_RETRIES,
+    initialDelayMs = INITIAL_DELAY_MS,
+    retryableStatuses = [429, 500, 502, 503, 504],
+  } = options;
+
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: unknown) {
+      lastError = error;
+
+      // Check if error is retryable
+      const status = (error as any)?.status ?? (error as any)?.statusCode;
+      const isRetryable = !status || retryableStatuses.includes(status);
+
+      if (!isRetryable || attempt === maxRetries) {
+        throw error;
+      }
+
+      // Calculate delay: base * 2^attempt + jitter
+      const delay = initialDelayMs * Math.pow(2, attempt) + Math.random() * 500;
+      console.warn(`[vision] Attempt ${attempt + 1}/${maxRetries} failed (status=${status}). Retrying in ${Math.round(delay)}ms...`);
+
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
+// ─── Safe AI Call Wrapper ──────────────────────────────────
+
+/**
+ * Wraps any OpenAI call with retry logic and returns null on failure
+ * instead of throwing. Useful for non-critical AI enhancements.
+ */
+export async function safeAICall<T>(
+  fn: () => Promise<T>,
+  fallback: T
+): Promise<T> {
+  try {
+    return await withRetry(fn);
+  } catch (error) {
+    console.error("[vision] AI call failed after retries:", error);
+    return fallback;
+  }
 }
 
 // ─── Clothing Analysis (Vision) ────────────────────────────
@@ -79,24 +146,26 @@ export async function analyzeClothingPhoto(
         },
       } as const);
 
-  const response = await client.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      { role: "system", content: CLOTHING_ANALYSIS_SYSTEM },
-      {
-        role: "user",
-        content: [
-          imageContent,
-          {
-            type: "text" as const,
-            text: "Analyze this clothing/fashion item and return structured JSON.",
-          },
-        ] as any,
-      },
-    ],
-    response_format: { type: "json_object" as const },
-    max_tokens: 500,
-  });
+  const response = await withRetry(() =>
+    client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: CLOTHING_ANALYSIS_SYSTEM },
+        {
+          role: "user",
+          content: [
+            imageContent,
+            {
+              type: "text" as const,
+              text: "Analyze this clothing/fashion item and return structured JSON.",
+            },
+          ] as any,
+        },
+      ],
+      response_format: { type: "json_object" as const },
+      max_tokens: 500,
+    })
+  );
 
   const raw = JSON.parse(response.choices[0].message.content || "{}");
 

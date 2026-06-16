@@ -38,21 +38,22 @@ export default function ScanPage() {
   const [result, setResult] = useState<PrePurchaseScan | null>(null);
   const [analyzedItem, setAnalyzedItem] = useState<AnalyzedItem | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   async function handleScan() {
-    if (!imageUrl && !fileInputRef.current?.files?.length) return;
+    if (!imageUrl && !selectedFile) return;
     setScanning(true);
     setResult(null);
     setAnalyzedItem(null);
 
     try {
       let body: Record<string, unknown> = {};
-      if (fileInputRef.current?.files?.[0]) {
-        const file = fileInputRef.current.files[0];
+      if (selectedFile) {
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => resolve((reader.result as string).split(",")[1]);
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(selectedFile);
         });
         body.base64 = base64;
         body.estimatedPrice = 50;
@@ -62,16 +63,38 @@ export default function ScanPage() {
       }
 
       const res = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Scan failed (${res.status})`);
+      }
       const data = await res.json();
       setResult(data.scan);
       setAnalyzedItem(data.analyzedItem);
       toast.success("Analysis complete!");
     } catch (e) {
       console.error("Scan failed:", e);
-      toast.error("Scan failed — please try again");
+      toast.error(e instanceof Error ? e.message : "Scan failed — please try again");
     } finally {
       setScanning(false);
     }
+  }
+
+  function handleFileSelect(file: File | null) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function clearFile() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function scoreColor(score: number) {
@@ -89,33 +112,43 @@ export default function ScanPage() {
       />
 
       {/* Upload Zone */}
-      <div
-        onClick={() => fileInputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault(); setDragOver(false);
-          const file = e.dataTransfer.files[0];
-          if (file && fileInputRef.current) {
-            const dt = new DataTransfer(); dt.items.add(file); fileInputRef.current.files = dt.files;
-          }
-        }}
-        style={{
-          borderRadius: 'var(--radius-lg)',
-          padding: '48px 24px',
-          border: `2px dashed ${dragOver ? 'var(--color-primary)' : 'var(--color-border-strong)'}`,
-          background: dragOver ? 'rgba(190,24,93,0.04)' : 'var(--color-muted)',
-          textAlign: 'center',
-          cursor: 'pointer',
-          transition: 'all 150ms ease',
-          marginBottom: 16,
-        }}
-      >
-        <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={() => {}} />
-        <p style={{ fontSize: 36, marginBottom: 12 }}>📸</p>
-        <p style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-body)', marginBottom: 4 }}>Drop an image here or click to upload</p>
-        <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>JPG, PNG, WebP — max 10MB</p>
-      </div>
+      {!previewUrl ? (
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault(); setDragOver(false);
+            handleFileSelect(e.dataTransfer.files[0]);
+          }}
+          style={{
+            borderRadius: 'var(--radius-lg)',
+            padding: '48px 24px',
+            border: `2px dashed ${dragOver ? 'var(--color-primary)' : 'var(--color-border-strong)'}`,
+            background: dragOver ? 'rgba(190,24,93,0.04)' : 'var(--color-muted)',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            marginBottom: 16,
+          }}
+        >
+          <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)} />
+          <p style={{ fontSize: 36, marginBottom: 12 }}>📸</p>
+          <p style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-body)', marginBottom: 4 }}>Drop an image here or click to upload</p>
+          <p style={{ fontSize: 12, color: 'var(--color-muted-foreground)', fontFamily: 'var(--font-body)' }}>JPG, PNG, WebP — max 10MB</p>
+        </div>
+      ) : (
+        <div style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', marginBottom: 16, aspectRatio: '3/4', maxWidth: 300 }}>
+          <img src={previewUrl} alt="Scan preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <button
+            onClick={clearFile}
+            aria-label="Remove image"
+            style={{ position: 'absolute', top: 10, right: 10, width: 32, height: 32, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', border: 'none', cursor: 'pointer', fontSize: 16, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* URL Input */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
@@ -129,7 +162,7 @@ export default function ScanPage() {
         />
         <button
           onClick={handleScan}
-          disabled={scanning || (!imageUrl && !fileInputRef.current?.files?.length)}
+          disabled={scanning || (!imageUrl && !selectedFile)}
           className="btn-primary"
           style={{ fontSize: 13, padding: '10px 20px', whiteSpace: 'nowrap' }}
         >

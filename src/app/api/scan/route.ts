@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getSupabase } from "@/lib/supabase";
-import { getOpenAIClient, analyzeClothingPhoto } from "@/lib/vision";
+import { getOpenAIClient, analyzeClothingPhoto, withRetry } from "@/lib/vision";
 import type { PrePurchaseScan, ScanVerdict, WardrobeItem } from "@/lib/types";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { mapWardrobeRows } from "@/lib/mappers";
@@ -149,30 +149,32 @@ export async function POST(req: NextRequest) {
     // Step 5: AI-powered reasoning enhancement
     try {
       const client = getOpenAIClient();
-      const aiReasoning = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a personal stylist helping someone decide whether to buy a clothing item. " +
-              "Given the item and their existing wardrobe, give a concise verdict explanation in 2-3 sentences. " +
-              "Be opinionated but helpful. Return plain text only.",
-          },
-          {
-            role: "user",
-            content:
-              "Item to buy: " + analyzedItem.itemType + " (" +
-              analyzedItem.primaryColor + " " + analyzedItem.subtype + ")\n" +
-              "Matches " + totalCombos + " existing items: " +
-              matchingItems.slice(0, 5).join(", ") + "\n" +
-              "Similar items owned (" + duplicateScore + "): " +
-              similarItems.slice(0, 3).join(", ") + "\n" +
-              "Wardrobe size: " + wardrobe.length + " items",
-          },
-        ],
-        max_tokens: 200,
-      });
+      const aiReasoning = await withRetry(() =>
+        client.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a personal stylist helping someone decide whether to buy a clothing item. " +
+                "Given the item and their existing wardrobe, give a concise verdict explanation in 2-3 sentences. " +
+                "Be opinionated but helpful. Return plain text only.",
+            },
+            {
+              role: "user",
+              content:
+                "Item to buy: " + analyzedItem.itemType + " (" +
+                analyzedItem.primaryColor + " " + analyzedItem.subtype + ")\n" +
+                "Matches " + totalCombos + " existing items: " +
+                matchingItems.slice(0, 5).join(", ") + "\n" +
+                "Similar items owned (" + duplicateScore + "): " +
+                similarItems.slice(0, 3).join(", ") + "\n" +
+                "Wardrobe size: " + wardrobe.length + " items",
+            },
+          ],
+          max_tokens: 200,
+        })
+      );
 
       const aiText = aiReasoning.choices[0]?.message?.content;
       if (aiText) reasoning = aiText;

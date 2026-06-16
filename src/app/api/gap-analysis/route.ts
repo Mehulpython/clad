@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getSupabase } from "@/lib/supabase";
-import { getOpenAIClient } from "@/lib/vision";
+import { getOpenAIClient, withRetry } from "@/lib/vision";
 import { mapWardrobeRows } from "@/lib/mappers";
 import type { WardrobeItem, WardrobeGap, GapSuggestion, ClothingCategory, Season, Occasion } from "@/lib/types";
 
@@ -190,20 +190,22 @@ export async function GET() {
       ).join("\n");
 
       const client = getOpenAIClient();
-      const aiResponse = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional wardrobe analyst. Given a user's wardrobe summary, identify the top 3 most impactful gaps in 2 sentences each. Return ONLY a plain text paragraph, no JSON or markdown.",
-          },
-          {
-            role: "user",
-            content: "Wardrobe (" + items.length + " items):\n" + wardrobeSummary,
-          },
-        ],
-        max_tokens: 300,
-      });
+      const aiResponse = await withRetry(() =>
+        client.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content: "You are a professional wardrobe analyst. Given a user's wardrobe summary, identify the top 3 most impactful gaps in 2 sentences each. Return ONLY a plain text paragraph, no JSON or markdown.",
+            },
+            {
+              role: "user",
+              content: "Wardrobe (" + items.length + " items):\n" + wardrobeSummary,
+            },
+          ],
+          max_tokens: 300,
+        })
+      );
       aiInsights = aiResponse.choices[0]?.message?.content || null;
     } catch (e) {
       // AI insights are optional — don't fail the request

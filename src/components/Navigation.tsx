@@ -19,7 +19,7 @@ export default function Navigation() {
   const pathname = usePathname();
 
   return (
-    <nav style={{
+    <nav aria-label="Main navigation" style={{
       position: 'fixed',
       bottom: 0,
       left: 0,

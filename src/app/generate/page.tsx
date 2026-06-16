@@ -48,6 +48,7 @@ export default function GeneratePage() {
 
   async function handleGenerate() {
     setGenerating(true);
+    setOutfits([]);
     try {
       const res = await fetch("/api/outfits/generate", {
         method: "POST",
@@ -55,12 +56,18 @@ export default function GeneratePage() {
         body: JSON.stringify({ occasion: selectedOccasion, mood: selectedMood }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error("Generation failed");
+      if (!res.ok) throw new Error(data.error || data.message || "Generation failed");
       setOutfits(data.outfits || []);
-      toast.success("Created outfit ideas!");
+      if (data.needsUpload) {
+        toast.error("Add some clothes first!");
+      } else if ((data.outfits || []).length === 0) {
+        toast.error(data.message || "No outfits generated. Try different filters.");
+      } else {
+        toast.success("Created outfit ideas!");
+      }
     } catch (e) {
       console.error("Generation failed:", e);
-      toast.error("Failed to generate outfits");
+      toast.error(e instanceof Error ? e.message : "Failed to generate outfits");
     } finally {
       setGenerating(false);
     }
